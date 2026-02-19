@@ -58,7 +58,24 @@ export default function ShipmentPage({ hdr, sH, setPg }) {
               options={CURRENCIES.map((v) => ({ value: v, label: v }))}
             />
             <Field label="FX Rate (→THB)" value={hdr.fx} onChange={(v) => sH("fx", v)} type="number" />
-            <Field label="Packages" value={hdr.pkgs} onChange={(v) => sH("pkgs", v)} type="number" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <Field label="Packages" value={hdr.pkgs} onChange={(v) => sH("pkgs", v)} type="number" />
+              <Select
+                label="Package Unit"
+                value={hdr.pkgUnit || "CARTON"}
+                onChange={(v) => sH("pkgUnit", v)}
+                options={[
+                  { value: "CARTON", label: "CARTON" },
+                  { value: "PALLET", label: "PALLET" },
+                  { value: "CASE", label: "CASE" },
+                  { value: "DRUM", label: "DRUM" },
+                  { value: "BAG", label: "BAG" },
+                  { value: "PACKAGE", label: "PACKAGE" },
+                  { value: "BUNDLE", label: "BUNDLE" },
+                  { value: "PIECE", label: "PIECE" },
+                ]}
+              />
+            </div>
           </div>
         </div>
 
