@@ -8,6 +8,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           xlsx: ['xlsx'],
+          pdfjs: ['pdfjs-dist'],
         },
       },
     },

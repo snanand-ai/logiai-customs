@@ -3,6 +3,7 @@ import Icons from "./Icons";
 import { s } from "../constants/styles";
 import { parseExcel, findColumn, CI_COLUMNS, MASTER_COLUMNS, extractHeaderMetadata } from "../utils/excelParser";
 import { detectFileType } from "../utils/fileDetection";
+import { extractBLMetadata } from "../utils/pdfParser";
 import { uid } from "../utils/format";
 
 const DOC_STATUS_CONFIG = [
@@ -86,7 +87,7 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
             if (!parsed.length) throw new Error("No items found — check column headers");
             setItems(parsed);
 
-            // Auto-fill shipment header from CI metadata area
+            // Auto-fill shipment header from CI metadata (header + footer)
             if (wb) {
               const meta = extractHeaderMetadata(file, wb);
               if (Object.keys(meta).length > 0) {
@@ -99,6 +100,10 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
                   if (meta.blNo && !prev.blNo) updated.blNo = meta.blNo;
                   if (meta.vessel && !prev.vessel) updated.vessel = meta.vessel;
                   if (meta.currency && !prev.currency) updated.currency = meta.currency;
+                  // New fields from CI footer
+                  if (meta.shipper && !prev.shipper) updated.shipper = meta.shipper;
+                  if (meta.origin && !prev.origin) updated.origin = meta.origin;
+                  if (meta.packages && !prev.pkgs) updated.pkgs = meta.packages;
                   return updated;
                 });
               }
@@ -148,10 +153,45 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
           }
           break;
         }
-        case "bl":
-          newDocs.bl = { name: file.name };
-          log.push({ file: file.name, type: "bl", info: "Bill of Lading detected", color: "#fbbf24" });
+        case "bl": {
+          // Extract transport metadata from B/L PDF
+          if (ext === "pdf") {
+            try {
+              const blMeta = await extractBLMetadata(file);
+              const fields = Object.keys(blMeta).filter((k) => blMeta[k]);
+              newDocs.bl = { name: file.name, fields: fields.length };
+              if (fields.length > 0) {
+                setHdr((prev) => {
+                  const updated = { ...prev };
+                  // Only fill empty fields — don't overwrite user entries
+                  if (blMeta.blNo && !prev.blNo) updated.blNo = blMeta.blNo;
+                  if (blMeta.vessel && !prev.vessel) updated.vessel = blMeta.vessel;
+                  if (blMeta.voyage && !prev.voyage) updated.voyage = blMeta.voyage;
+                  if (blMeta.pol && !prev.pol) updated.pol = blMeta.pol;
+                  if (blMeta.pod && !prev.pod) updated.pod = blMeta.pod;
+                  if (blMeta.eta && !prev.eta) updated.eta = blMeta.eta;
+                  if (blMeta.origin && !prev.origin) updated.origin = blMeta.origin;
+                  if (blMeta.shipper && !prev.shipper) updated.shipper = blMeta.shipper;
+                  if (blMeta.consignee && !prev.consignee) updated.consignee = blMeta.consignee;
+                  if (blMeta.taxId && !prev.taxId) updated.taxId = blMeta.taxId;
+                  if (blMeta.packages && !prev.pkgs) updated.pkgs = blMeta.packages;
+                  if (blMeta.pkgUnit) updated.pkgUnit = blMeta.pkgUnit;
+                  return updated;
+                });
+                log.push({ file: file.name, type: "bl", info: `B/L parsed — ${fields.length} fields extracted`, color: "#fbbf24" });
+              } else {
+                log.push({ file: file.name, type: "bl", info: "Bill of Lading detected (no fields extracted)", color: "#fbbf24" });
+              }
+            } catch (e) {
+              newDocs.bl = { name: file.name };
+              log.push({ file: file.name, type: "bl", info: `Bill of Lading detected (PDF parse: ${e.message})`, color: "#fbbf24" });
+            }
+          } else {
+            newDocs.bl = { name: file.name };
+            log.push({ file: file.name, type: "bl", info: "Bill of Lading detected", color: "#fbbf24" });
+          }
           break;
+        }
         case "freight":
           newDocs.freight = { name: file.name };
           log.push({ file: file.name, type: "freight", info: "Freight invoice detected", color: "#34d399" });
@@ -201,7 +241,9 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
       ? `${docs.ci.items} items from ${docs.ci.name}`
       : cfg.key === "master" && docs.master
         ? `${docs.master.entries} entries from ${docs.master.name}`
-        : docs[cfg.key]?.name || null,
+        : cfg.key === "bl" && docs.bl
+          ? docs.bl.fields ? `${docs.bl.fields} fields extracted from ${docs.bl.name}` : docs.bl.name
+          : docs[cfg.key]?.name || null,
   }));
 
   const missingRequired = docStatuses.filter((d) => d.required && !d.data);

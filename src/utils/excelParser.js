@@ -139,8 +139,10 @@ export const CI_COLUMNS = {
 };
 
 /**
- * Extract shipment header metadata from the area ABOVE the data header row.
- * Scans raw cells for patterns like "INVOICE NO:", "DATE:", "B/L", consignee name, etc.
+ * Extract shipment header metadata from both the area ABOVE the data header row
+ * and the FOOTER area below the data (totals, shipper/beneficiary info, bank details).
+ * Scans raw cells for patterns like "INVOICE NO:", "DATE:", "B/L", consignee name,
+ * shipper/beneficiary name, total packages, total weight, etc.
  */
 export function extractHeaderMetadata(file, wb) {
   const meta = {};
@@ -160,18 +162,30 @@ export function extractHeaderMetadata(file, wb) {
   const headerRow = detectHeaderRow(sheet);
   const range = XLSX.utils.decode_range(sheet["!ref"]);
 
-  // Collect all text from the area above the data header row
-  const allText = [];
+  // Collect all text from the area ABOVE the data header row
+  const headerText = [];
   for (let r = 0; r < headerRow; r++) {
     for (let c = range.s.c; c <= Math.min(range.e.c, 20); c++) {
       const cell = sheet[XLSX.utils.encode_cell({ r, c })];
       if (cell && cell.v !== "" && cell.v !== undefined) {
-        allText.push({ r, c, v: String(cell.v).trim() });
+        headerText.push({ r, c, v: String(cell.v).trim() });
       }
     }
   }
 
-  for (const { r, c, v } of allText) {
+  // Collect all text from the FOOTER area (below data)
+  const footerText = [];
+  for (let r = headerRow + 1; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= Math.min(range.e.c, 20); c++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+      if (cell && cell.v !== "" && cell.v !== undefined) {
+        footerText.push({ r, c, v: String(cell.v).trim() });
+      }
+    }
+  }
+
+  // --- HEADER AREA ---
+  for (const { r, c, v } of headerText) {
     const vl = v.toLowerCase();
 
     // Invoice number: "INVOICE NO: 251030" or "INV-251030"
@@ -190,9 +204,14 @@ export function extractHeaderMetadata(file, wb) {
 
     // Consignee: typically the cell after "Name" label
     if (vl === "name") {
-      // Look for the next cell to the right in the same row
-      const nameCell = allText.find((t) => t.r === r && t.c > c);
+      const nameCell = headerText.find((t) => t.r === r && t.c > c);
       if (nameCell && nameCell.v.length > 3) meta.consignee = nameCell.v;
+    }
+
+    // Address (for reference)
+    if (vl === "address") {
+      const addrCell = headerText.find((t) => t.r === r && t.c > c);
+      if (addrCell && addrCell.v.length > 5) meta.consigneeAddr = addrCell.v;
     }
 
     // B/L number
@@ -206,6 +225,107 @@ export function extractHeaderMetadata(file, wb) {
     // Currency detection from "Unit price (USD)" style headers or "USD" mentions
     const curMatch = v.match(/\b(USD|EUR|GBP|JPY|CNY|SGD)\b/i);
     if (curMatch && !meta.currency) meta.currency = curMatch[1].toUpperCase();
+  }
+
+  // --- FOOTER AREA ---
+  // Look for: totals row, shipper/beneficiary info, payment terms
+  let foundTotal = false;
+  let foundBeneficiary = false;
+
+  for (const { r, c, v } of footerText) {
+    const vl = v.toLowerCase();
+
+    // Totals row: "TOTAL：" or "TOTAL" — grab packages (CTNS col), net/gross weight
+    if (vl.includes("total") && !foundTotal) {
+      // Find numeric values on the same row (packages, weights, amount)
+      const rowCells = footerText.filter((t) => t.r === r && t.c > c);
+      foundTotal = true;
+
+      // Packages (CTNS column — typically around column G/index 6)
+      // Look for small integer (packages count) followed by larger weight values
+      const nums = rowCells
+        .map((t) => ({ c: t.c, n: parseFloat(t.v) }))
+        .filter((t) => !isNaN(t.n));
+
+      if (nums.length >= 2) {
+        // First small integer is likely packages, last large number is total amount
+        const sorted = [...nums].sort((a, b) => a.c - b.c);
+        // Packages: first numeric value that's a reasonable package count (1-9999)
+        for (const { c: col, n } of sorted) {
+          if (n > 0 && n < 10000 && Number.isInteger(n) && !meta.packages) {
+            meta.packages = n;
+            break;
+          }
+        }
+      }
+    }
+
+    // Beneficiary/Shipper name
+    if (vl.includes("beneficiary name") || vl.includes("shipper")) {
+      foundBeneficiary = true;
+    }
+    // The shipper name is typically on the row after "Beneficiary Name:"
+    if (foundBeneficiary && !meta.shipper) {
+      // Check if this is a company name (contains CO, LTD, CORP, INC, etc.)
+      if (/\b(CO\.?\s*LTD|CORP|INC|LLC|LIMITED|ENTERPRISE|TRADING|MANUFACTURING)\b/i.test(v)) {
+        meta.shipper = v.replace(/\s+/g, " ");
+      }
+    }
+
+    // Payment terms
+    if (vl.includes("payment terms") || vl.includes("payment term")) {
+      const ptMatch = v.match(/payment\s*terms?\s*[:\s]\s*(.+)/i);
+      if (ptMatch) meta.paymentTerms = ptMatch[1].trim();
+    }
+
+    // Origin detection from footer text (e.g., "CHINA", "GUANGDONG, CHINA")
+    if (!meta.origin) {
+      const originMatch = v.match(/\b(CHINA|JAPAN|KOREA|TAIWAN|VIETNAM|INDONESIA|MALAYSIA|INDIA|GERMANY|ITALY|HONG\s*KONG)\b/i);
+      if (originMatch) {
+        const countryMap = {
+          CHINA: "CN", JAPAN: "JP", KOREA: "KR", TAIWAN: "TW",
+          VIETNAM: "VN", INDONESIA: "ID", MALAYSIA: "MY", INDIA: "IN",
+          GERMANY: "DE", ITALY: "IT", "HONG KONG": "HK",
+        };
+        const key = originMatch[1].toUpperCase();
+        meta.origin = countryMap[key] || key.substring(0, 2);
+      }
+    }
+  }
+
+  // Also check the PL (packing list) sheet for additional metadata
+  for (const n of wb.SheetNames) {
+    const nl = n.toLowerCase();
+    if (nl.includes("pl") || nl.includes("packing")) {
+      const plSheet = wb.Sheets[n];
+      if (!plSheet || !plSheet["!ref"]) continue;
+      const plRange = XLSX.utils.decode_range(plSheet["!ref"]);
+
+      // Scan PL footer for package/weight totals
+      for (let r = Math.max(0, plRange.e.r - 20); r <= plRange.e.r; r++) {
+        for (let col = plRange.s.c; col <= Math.min(plRange.e.c, 15); col++) {
+          const cell = plSheet[XLSX.utils.encode_cell({ r, c: col })];
+          if (!cell || cell.v === "" || cell.v === undefined) continue;
+          const cv = String(cell.v).trim().toLowerCase();
+          if (cv.includes("total")) {
+            // Grab values from same row
+            const rowVals = [];
+            for (let rc = col + 1; rc <= Math.min(plRange.e.c, 15); rc++) {
+              const vc = plSheet[XLSX.utils.encode_cell({ r, c: rc })];
+              if (vc && vc.v !== "" && typeof vc.v === "number") {
+                rowVals.push({ c: rc, v: vc.v });
+              }
+            }
+            // CBM is typically the volume column
+            if (!meta.cbm) {
+              const cbmVal = rowVals.find((v) => v.v > 0 && v.v < 100);
+              // Use the value around the CBM column position
+            }
+          }
+        }
+      }
+      break; // Only process first PL sheet
+    }
   }
 
   return meta;
