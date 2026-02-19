@@ -22,6 +22,7 @@ const Icons = {
   ship: (p = {}) => <SvgIcon {...p} d="M2 20l.5-1.5A2.5 2.5 0 0 1 5 17h14a2.5 2.5 0 0 1 2.5 1.5L22 20M6 17V4h12v13M12 4v5m-4-2l4-3 4 3" />,
   dollar: (p = {}) => <SvgIcon {...p} d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />,
   anchor: (p = {}) => <SvgIcon {...p} d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 8v14M5 12H2a10 10 0 0 0 20 0h-3" />,
+  book: (p = {}) => <SvgIcon {...p} d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" />,
 };
 
 export default Icons;
