@@ -97,8 +97,10 @@ export async function parseExcel(file) {
         const smartParse = parseSheetWithHeaderDetection(sheet);
         if (smartParse.length > 0) {
           const smartHeaders = Object.keys(smartParse[0]);
-          const smartJunk = smartHeaders.filter((h) => /^__EMPTY/.test(h)).length;
-          if (smartJunk < smartHeaders.length * 0.5) {
+          const realHeaders = smartHeaders.filter((h) => !/^__EMPTY/.test(h)).length;
+          // Accept smart parse if it found at least 3 real column headers
+          // (wide merged-cell files may still have many __EMPTY columns)
+          if (realHeaders >= 3) {
             sh[name] = smartParse;
             return;
           }
@@ -125,8 +127,9 @@ export function findColumn(headers, patterns) {
 
 // Column detection patterns per the spec
 export const CI_COLUMNS = {
-  partNo: ["part", "material", "item no", "sku", "product code", "article", "customer material"],
-  description: ["desc", "description", "item name", "product", "goods"],
+  // "customer material" first — this is typically the key used for master data matching
+  partNo: ["customer material", "material", "part", "item no", "sku", "product code", "article"],
+  description: ["part name", "desc", "description", "item name", "product", "goods"],
   quantity: ["qty", "quantity", "pcs", "units", "order qty"],
   unitPrice: ["unit price", "price", "unit cost", "rate"],
   amount: ["amount", "total", "value", "ext. price"],
