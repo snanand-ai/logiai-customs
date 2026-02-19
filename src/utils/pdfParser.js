@@ -49,7 +49,7 @@ async function extractTextItems(file) {
 
 /**
  * Group text items by Y coordinate (rows) and concatenate items on the same row.
- * Returns array of { y, texts: [{x, text}] } sorted top-to-bottom.
+ * Returns array of { y, texts: [{x, text}] } sorted top-to-bottom (descending Y).
  */
 function groupByRows(items) {
   const byY = {};
@@ -64,15 +64,34 @@ function groupByRows(items) {
       texts: texts.sort((a, b) => a.x - b.x),
       full: texts.sort((a, b) => a.x - b.x).map((t) => t.text).join(" "),
     }))
-    .sort((a, b) => b.y - a.y); // descending Y = top to bottom
+    .sort((a, b) => b.y - a.y); // descending Y = top to bottom in page order
+}
+
+/**
+ * Get text at a specific X region from a row's text items.
+ * @param {Array} texts - row.texts array [{x, text}]
+ * @param {number} xMin - minimum X
+ * @param {number} xMax - maximum X
+ */
+function textInRange(texts, xMin, xMax) {
+  return texts
+    .filter((t) => t.x >= xMin && t.x < xMax)
+    .map((t) => t.text)
+    .join(" ")
+    .trim();
 }
 
 /**
  * Extract Bill of Lading metadata from a PDF file.
- * Parses the structured B/L format with labeled fields.
+ * Uses position-aware parsing to handle the structured B/L grid layout.
  *
- * Returns: { blNo, vessel, voyage, pol, pod, shipper, consignee,
- *            taxId, packages, pkgUnit, grossWeight, eta, origin }
+ * Typical B/L layout (3 columns):
+ *   Row: "Place of Receipt" (x~35) | "Pre-carriage by" (x~170) | "Port of Loading" (x~304)
+ *   Row: "ZHONGSHAN (DOOR)" (x~37) | [empty]                  | "SHEKOU" (x~306)    + "B/L No." (x~448)
+ *   Row: "Vessel" (x~35)           | "Voyage No." (x~170)     | "Port of Transshipment" (x~304)
+ *   Row: "CHANA BHUM" (x~37)       | "910S" (x~170)           | [empty]              + "1070749239" (x~448)
+ *
+ * B/L Number label is in column 4 (x>400), value is on the next value row at same X.
  */
 export async function extractBLMetadata(file) {
   const meta = {};
@@ -84,129 +103,118 @@ export async function extractBLMetadata(file) {
     const rows = groupByRows(items.filter((i) => i.page === 1));
     const fullText = rows.map((r) => r.full).join("\n");
 
-    // === STRATEGY ===
-    // B/L PDFs have labeled sections. We find the label row, then the value row below it.
-    // The layout is: label rows have field names like "Vessel", "Port of Discharge", etc.
-    // Value rows are directly below (lower Y value) with the actual data.
-
-    // Find rows containing specific labels and grab the row below
+    // Build a structured understanding of the B/L grid
+    // Find label rows and their corresponding value rows
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const nextRow = rows[i + 1];
-      const prevRow = i > 0 ? rows[i - 1] : null;
 
-      // Shipper — labeled section, value spans multiple rows below
+      // === SHIPPER ===
       if (row.full === "Shipper" && nextRow) {
-        // Collect shipper lines until we hit "Consignee"
         const lines = [];
         for (let j = i + 1; j < rows.length && j < i + 6; j++) {
           if (rows[j].full.includes("Consignee") || rows[j].full.includes("Notify")) break;
-          const line = rows[j].texts.filter((t) => t.x < 280).map((t) => t.text).join(" ");
+          const line = textInRange(rows[j].texts, 0, 280);
           if (line) lines.push(line);
         }
         if (lines.length) meta.shipper = lines.join(", ").replace(/,\s*$/, "");
       }
 
-      // Consignee — labeled section
+      // === CONSIGNEE ===
       if (row.full.startsWith("Consignee") && nextRow) {
         const lines = [];
         for (let j = i + 1; j < rows.length && j < i + 6; j++) {
           if (rows[j].full.includes("Notify Party") || rows[j].full.includes("Delivery")) break;
-          const line = rows[j].texts.filter((t) => t.x < 280).map((t) => t.text).join(" ");
+          const line = textInRange(rows[j].texts, 0, 280);
           if (line) lines.push(line);
         }
-        if (lines.length) meta.consignee = lines[0]; // First line is company name
+        if (lines.length) meta.consignee = lines[0];
       }
 
-      // Port of Loading — look for label, then value below
-      if (row.full.includes("Port of Loading") && nextRow) {
-        // Port of Loading is typically at x > 350 in the label row
-        // and value is at similar x in next row
-        const loadingTexts = nextRow.texts.filter((t) => t.x > 250 && t.x < 500);
-        if (loadingTexts.length) {
-          const pol = loadingTexts.map((t) => t.text).join(" ");
-          if (pol && !pol.includes("B/L")) meta.pol = pol;
-        }
-        // Sometimes Port of Loading label is standalone and value is on the right of same row
-      }
+      // === PORT OF LOADING + B/L NO (label row) ===
+      // Label row: "Place of Receipt ... | Pre-carriage by | Port of Loading"
+      // Value row: "ZHONGSHAN (DOOR)"    | [empty]         | "SHEKOU"         | "B/L No."
+      // Next label: "Vessel"             | "Voyage No."    | "Port of Transshipment"
+      // Next value: "CHANA BHUM"         | "910S"          |                  | "1070749239"
+      if (row.full.includes("Place of Receipt") && row.full.includes("Port of Loading") && nextRow) {
+        // Value row is nextRow (i+1)
+        // Port of Loading: get text in x range 280-430 (column 3)
+        const polVal = textInRange(nextRow.texts, 280, 430);
+        if (polVal && polVal.length > 1) meta.pol = polVal;
 
-      // Place of Receipt / Port of Loading / B/L No row
-      if (row.full.includes("Place of Receipt") && row.full.includes("Port of Loading")) {
-        // Values on next row
-        if (nextRow) {
-          // Parse the next row: typically "ZHONGSHAN (DOOR) | SHEKOU | B/L No."
-          // or values: place of receipt at left, POL in middle, B/L label on right
-          const vals = nextRow.texts;
-          if (vals.length >= 1) {
-            // Left portion = place of receipt, skip for now
-            // Look for port of loading
+        // B/L No label might be at x>430 on this value row
+        // The actual B/L NUMBER is 2 rows below (the next value row)
+        // Find it: skip the next label row (Vessel/Voyage), get the value row after that
+        if (i + 3 < rows.length) {
+          const blValueRow = rows[i + 3]; // value row after Vessel/Voyage labels
+          const blNo = textInRange(blValueRow.texts, 400, 600);
+          if (blNo && /^\d{5,}$/.test(blNo.trim())) {
+            meta.blNo = blNo.trim();
           }
         }
       }
 
-      // B/L No — often appears as a label, with value on the row below
-      if (row.full.includes("B/L No") && nextRow) {
-        // The B/L number could be in the next row at right-side x position
-        const blTexts = nextRow.texts.filter((t) => t.x > 350);
-        if (blTexts.length) {
-          const bn = blTexts.map((t) => t.text).join("").trim();
-          if (bn && /\d{5,}/.test(bn)) meta.blNo = bn;
-        }
+      // === VESSEL + VOYAGE (label row) ===
+      if (row.full.includes("Vessel") && row.full.includes("Voyage") && !row.full.includes("Board") && nextRow) {
+        // Vessel: column 1 (x < 160)
+        const vesselVal = textInRange(nextRow.texts, 0, 160);
+        if (vesselVal) meta.vessel = vesselVal;
+
+        // Voyage: column 2 (x 160-300)
+        const voyageVal = textInRange(nextRow.texts, 160, 300);
+        if (voyageVal) meta.voyage = voyageVal;
       }
 
-      // Vessel + Voyage — labeled row, values below
-      if (row.full.includes("Vessel") && row.full.includes("Voyage")) {
-        if (nextRow) {
-          const vals = nextRow.texts;
-          // Vessel is typically at x < 200, Voyage at middle position
-          const vesselTexts = vals.filter((t) => t.x < 200);
-          const voyageTexts = vals.filter((t) => t.x >= 200 && t.x < 400);
-          if (vesselTexts.length) meta.vessel = vesselTexts.map((t) => t.text).join(" ");
-          if (voyageTexts.length) meta.voyage = voyageTexts.map((t) => t.text).join("");
-        }
+      // === PORT OF DISCHARGE (label row) ===
+      if (row.full.includes("Port of Discharge") && row.full.includes("Place of Delivery") && nextRow) {
+        // POD: column 1 (x < 160)
+        const podVal = textInRange(nextRow.texts, 0, 160);
+        if (podVal) meta.pod = podVal;
       }
 
-      // Port of Discharge + Place of Delivery + Movement
-      if (row.full.includes("Port of Discharge") && row.full.includes("Place of Delivery")) {
-        if (nextRow) {
-          const vals = nextRow.texts;
-          // POD at left, Place of Delivery middle, Movement right
-          const podTexts = vals.filter((t) => t.x < 150);
-          if (podTexts.length) meta.pod = podTexts.map((t) => t.text).join(" ");
-        }
-      }
-
-      // Tax ID pattern: **TAX ID:0105520015634
+      // === TAX ID ===
       const taxMatch = row.full.match(/TAX\s*ID\s*[:\s]\s*(\d{10,})/i);
       if (taxMatch) meta.taxId = taxMatch[1];
 
-      // Packages: "29   CARTON(S)"
+      // === PACKAGES ===
       const pkgMatch = row.full.match(/(\d+)\s+(CARTON|PALLET|PACKAGE|CASE|BOX|CRATE|DRUM|BAG|BUNDLE|PIECE|UNIT)/i);
       if (pkgMatch && !meta.packages) {
         meta.packages = parseInt(pkgMatch[1]);
         meta.pkgUnit = pkgMatch[2].toUpperCase().replace(/\(S\)$/i, "");
       }
 
-      // Gross weight: "234.500" kgs
+      // === GROSS WEIGHT ===
       const gwMatch = row.full.match(/(\d+\.?\d*)\s*(?:kgs?|KGS?)/);
       if (gwMatch && !meta.grossWeight) {
         meta.grossWeight = parseFloat(gwMatch[1]);
       }
     }
 
-    // Regex fallbacks on full text for fields not yet found
+    // === FALLBACK REGEX on full text ===
 
-    // B/L number — try regex on full text
+    // B/L number — scan all rows for a standalone long number at x > 400
+    if (!meta.blNo) {
+      for (const row of rows) {
+        for (const t of row.texts) {
+          if (t.x > 400 && /^\d{7,}$/.test(t.text.trim())) {
+            meta.blNo = t.text.trim();
+            break;
+          }
+        }
+        if (meta.blNo) break;
+      }
+    }
+
+    // B/L number — last resort regex
     if (!meta.blNo) {
       const blMatch = fullText.match(/B\/L\s*No\.?\s*\n?\s*(\d{7,})/i);
       if (blMatch) meta.blNo = blMatch[1];
     }
 
-    // Date — look for date patterns near "Date:" label
+    // Date — look for date patterns
     const dateMatch = fullText.match(/(?:Date|Shipped on board)[:\s]*\n?\s*(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4})/i);
     if (dateMatch) {
       const raw = dateMatch[1];
-      // Handle DD.MM.YYYY format
       const parts = raw.split(/[.\/-]/);
       if (parts.length === 3) {
         const [d, m, y] = parts;
@@ -228,13 +236,13 @@ export async function extractBLMetadata(file) {
       meta.origin = countryMap[originMatch[1].toUpperCase()] || originMatch[1].substring(0, 2).toUpperCase();
     }
 
-    // Vessel from "Shipped on Board Vessel:" section
+    // Vessel from "Shipped on Board Vessel:" at bottom of B/L
     if (!meta.vessel) {
       const vesselMatch = fullText.match(/Shipped on Board Vessel:\s*\n?\s*([A-Z][A-Z\s]+)/i);
       if (vesselMatch) meta.vessel = vesselMatch[1].trim();
     }
 
-    // Port of Loading from "Shipped from Port of Loading:" section
+    // Port of Loading fallback from "Shipped from Port of Loading:" at bottom
     if (!meta.pol) {
       const polMatch = fullText.match(/(?:Shipped from )?Port of Loading:\s*\n?\s*([A-Z][A-Z\s]+)/i);
       if (polMatch) {
