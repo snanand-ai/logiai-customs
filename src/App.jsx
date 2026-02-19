@@ -137,7 +137,7 @@ export default function App() {
             uploadLog={uploadLog} setUploadLog={setUploadLog}
             items={items} setItems={setItems}
             md={md} setMd={setMd}
-            hdr={hdr} msg={msg} setPg={setPage}
+            hdr={hdr} setHdr={setHdr} msg={msg} setPg={setPage}
           />
         )}
         {page === "shipment" && (

@@ -109,7 +109,7 @@ export async function parseExcel(file) {
     }
     sh[name] = defaultParse;
   });
-  return { names: wb.SheetNames, sh };
+  return { names: wb.SheetNames, sh, wb };
 }
 
 /**
@@ -137,6 +137,79 @@ export const CI_COLUMNS = {
   grossWeight: ["gross weight", "g.w", "gw"],
   poNumber: ["po", "purchase order", "po number", "order no"],
 };
+
+/**
+ * Extract shipment header metadata from the area ABOVE the data header row.
+ * Scans raw cells for patterns like "INVOICE NO:", "DATE:", "B/L", consignee name, etc.
+ */
+export function extractHeaderMetadata(file, wb) {
+  const meta = {};
+  // Only process Excel files
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (!["xlsx", "xls"].includes(ext)) return meta;
+
+  // Find the CI sheet
+  let sheetName = wb.SheetNames[0];
+  for (const n of wb.SheetNames) {
+    const l = n.toLowerCase();
+    if (l.includes("ci") || l.includes("invoice") || l.includes("commercial")) { sheetName = n; break; }
+  }
+  const sheet = wb.Sheets[sheetName];
+  if (!sheet || !sheet["!ref"]) return meta;
+
+  const headerRow = detectHeaderRow(sheet);
+  const range = XLSX.utils.decode_range(sheet["!ref"]);
+
+  // Collect all text from the area above the data header row
+  const allText = [];
+  for (let r = 0; r < headerRow; r++) {
+    for (let c = range.s.c; c <= Math.min(range.e.c, 20); c++) {
+      const cell = sheet[XLSX.utils.encode_cell({ r, c })];
+      if (cell && cell.v !== "" && cell.v !== undefined) {
+        allText.push({ r, c, v: String(cell.v).trim() });
+      }
+    }
+  }
+
+  for (const { r, c, v } of allText) {
+    const vl = v.toLowerCase();
+
+    // Invoice number: "INVOICE NO: 251030" or "INV-251030"
+    const invMatch = v.match(/invoice\s*(?:no\.?|number|#)?\s*[:\s]\s*(.+)/i);
+    if (invMatch) meta.invNo = invMatch[1].trim();
+
+    // Date: "DATE:DEC 12,2025" or "DATE: 2025-12-15"
+    const dateMatch = v.match(/date\s*[:\s]\s*(.+)/i);
+    if (dateMatch) {
+      const raw = dateMatch[1].trim();
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) {
+        meta.invDate = d.toISOString().split("T")[0];
+      }
+    }
+
+    // Consignee: typically the cell after "Name" label
+    if (vl === "name") {
+      // Look for the next cell to the right in the same row
+      const nameCell = allText.find((t) => t.r === r && t.c > c);
+      if (nameCell && nameCell.v.length > 3) meta.consignee = nameCell.v;
+    }
+
+    // B/L number
+    const blMatch = v.match(/b\/?l\s*(?:no\.?|number|#)?\s*[:\s]\s*(.+)/i);
+    if (blMatch) meta.blNo = blMatch[1].trim();
+
+    // Vessel
+    const vesselMatch = v.match(/vessel\s*[:\s]\s*(.+)/i);
+    if (vesselMatch) meta.vessel = vesselMatch[1].trim();
+
+    // Currency detection from "Unit price (USD)" style headers or "USD" mentions
+    const curMatch = v.match(/\b(USD|EUR|GBP|JPY|CNY|SGD)\b/i);
+    if (curMatch && !meta.currency) meta.currency = curMatch[1].toUpperCase();
+  }
+
+  return meta;
+}
 
 export const MASTER_COLUMNS = {
   partNo: ["part", "material", "item", "sku", "product", "article", "customer material"],

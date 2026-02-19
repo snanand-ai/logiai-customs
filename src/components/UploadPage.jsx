@@ -1,7 +1,7 @@
 import { useRef, useCallback } from "react";
 import Icons from "./Icons";
 import { s } from "../constants/styles";
-import { parseExcel, findColumn, CI_COLUMNS, MASTER_COLUMNS } from "../utils/excelParser";
+import { parseExcel, findColumn, CI_COLUMNS, MASTER_COLUMNS, extractHeaderMetadata } from "../utils/excelParser";
 import { detectFileType } from "../utils/fileDetection";
 import { uid } from "../utils/format";
 
@@ -13,7 +13,7 @@ const DOC_STATUS_CONFIG = [
   { key: "drkw", label: "Previous DRKW", icon: Icons.file, required: false, color: "#f472b6" },
 ];
 
-export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, items, setItems, md, setMd, hdr, msg, setPg }) {
+export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, items, setItems, md, setMd, hdr, setHdr, msg, setPg }) {
   const inputRef = useRef();
   const uploading = useRef(false);
 
@@ -41,7 +41,7 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
       switch (type) {
         case "ci": {
           try {
-            const { names, sh } = sheetData;
+            const { names, sh, wb } = sheetData;
             let sheetName = names[0];
             for (const n of names) {
               const l = n.toLowerCase();
@@ -85,6 +85,25 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
 
             if (!parsed.length) throw new Error("No items found — check column headers");
             setItems(parsed);
+
+            // Auto-fill shipment header from CI metadata area
+            if (wb) {
+              const meta = extractHeaderMetadata(file, wb);
+              if (Object.keys(meta).length > 0) {
+                setHdr((prev) => {
+                  const updated = { ...prev };
+                  // Only fill empty fields — don't overwrite user entries
+                  if (meta.invNo && !prev.invNo) updated.invNo = meta.invNo;
+                  if (meta.invDate && !prev.invDate) updated.invDate = meta.invDate;
+                  if (meta.consignee && !prev.consignee) updated.consignee = meta.consignee;
+                  if (meta.blNo && !prev.blNo) updated.blNo = meta.blNo;
+                  if (meta.vessel && !prev.vessel) updated.vessel = meta.vessel;
+                  if (meta.currency && !prev.currency) updated.currency = meta.currency;
+                  return updated;
+                });
+              }
+            }
+
             newDocs.ci = { name: file.name, items: parsed.length, sheet: sheetName };
             log.push({ file: file.name, type: "ci", info: `${parsed.length} items extracted`, color: "#60a5fa" });
           } catch (e) {
