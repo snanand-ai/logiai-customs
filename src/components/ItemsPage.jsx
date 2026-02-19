@@ -1,6 +1,10 @@
+import { useState, useEffect } from "react";
 import Icons from "./Icons";
 import { s } from "../constants/styles";
 import { fmt, uid } from "../utils/format";
+
+const ETARIFF_URL = "http://itd.customs.go.th/igtf/th/main_frame.jsp?lang=en";
+const HS_HISTORY_KEY = "logiai_hs_history";
 
 const cellInput = {
   background: "rgba(0,0,0,0.25)",
@@ -13,10 +17,92 @@ const cellInput = {
   boxSizing: "border-box",
 };
 
+/**
+ * Load HS code history from localStorage.
+ * Format: { "partNo": { hs, th, duty, org, customer, date } }
+ */
+function loadHsHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HS_HISTORY_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Save current items' HS mappings to history for future auto-suggest.
+ */
+function saveHsHistory(items, customer) {
+  const history = loadHsHistory();
+  const now = new Date().toISOString().split("T")[0];
+  let saved = 0;
+  items.forEach((item) => {
+    if (item.pn && item.hs) {
+      history[item.pn] = {
+        hs: item.hs,
+        th: item.th || "",
+        duty: item.duty || 0,
+        org: item.org || "",
+        customer: customer || "",
+        date: now,
+      };
+      saved++;
+    }
+  });
+  localStorage.setItem(HS_HISTORY_KEY, JSON.stringify(history));
+  return saved;
+}
+
 export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile, setPg }) {
   const mdArr = Object.entries(md);
+  const missingHs = items.filter((i) => !i.hs && i.pn).length;
   const unmatched = items.filter((i) => !i.ok && i.pn).length;
   const totalInv = items.reduce((sum, i) => sum + i.qty * i.up, 0);
+  const [hsHistory] = useState(() => loadHsHistory());
+  const historyCount = Object.keys(hsHistory).length;
+
+  // Auto-match from history when no master data
+  const matchFromHistory = () => {
+    let matched = 0, unmatched = 0;
+    setItems((prev) =>
+      prev.map((item) => {
+        // Try master data first, then history
+        const fromMd = md[item.pn];
+        const fromHist = hsHistory[item.pn];
+        const data = fromMd || fromHist;
+        if (data) {
+          matched++;
+          return {
+            ...item,
+            hs: data.hs || item.hs,
+            th: data.th || item.th,
+            duty: data.duty || item.duty,
+            org: data.org || item.org,
+            ok: true,
+          };
+        }
+        if (item.pn) unmatched++;
+        return { ...item, ok: false };
+      })
+    );
+    return { matched, unmatched };
+  };
+
+  // Combined match: master data + history
+  const handleAutoMatch = () => {
+    if (mdArr.length > 0) {
+      autoMatch();
+    } else {
+      const { matched, unmatched } = matchFromHistory();
+      // Toast is handled by parent — we'll just log
+    }
+  };
+
+  // Save to history when navigating to declaration
+  const handleToDeclare = () => {
+    saveHsHistory(items, hdr.customer || hdr.consignee || "");
+    setPg("declaration");
+  };
 
   const addItem = () =>
     setItems((p) => [...p, { id: uid(), pn: "", desc: "", th: "", qty: 1, up: 0, nw: 0, gw: 0, po: "", hs: "", duty: 0, org: hdr.origin || "CN", ok: false }]);
@@ -52,6 +138,15 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
     position: "sticky", top: 0, background: "rgba(15,23,42,0.98)", zIndex: 2, whiteSpace: "nowrap",
   };
 
+  // Determine data source info
+  const hasmaster = mdArr.length > 0;
+  const hasHistory = historyCount > 0;
+  const dataSourceLabel = hasmaster
+    ? `${mdArr.length.toLocaleString()} master entries`
+    : hasHistory
+      ? `${historyCount.toLocaleString()} from history`
+      : "No HS data — enter manually or search E-Tariff";
+
   return (
     <div style={{ animation: "fadeIn .3s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -59,15 +154,38 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Line Items ({items.length})</h2>
           <p style={{ fontSize: 12, color: "#64748b", margin: "3px 0 0" }}>
             {ciFile?.st === "done" ? `From ${ciFile.name}` : "Upload CI, paste from Excel, or add manually"}
+            {" · "}
+            <span style={{ color: hasmaster ? "#a78bfa" : hasHistory ? "#60a5fa" : "#f59e0b" }}>{dataSourceLabel}</span>
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          {mdArr.length > 0 && items.length > 0 && (
-            <button onClick={autoMatch} style={{ ...s.btnGhost, color: "#60a5fa", borderColor: "rgba(96,165,250,0.2)" }}>
+          {/* E-Tariff search link */}
+          <a
+            href={ETARIFF_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...s.btnGhost,
+              color: "#f59e0b",
+              borderColor: "rgba(245,158,11,0.2)",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "6px 12px",
+            }}
+          >
+            {Icons.search({ sz: 14 })} E-Tariff
+          </a>
+          {/* Auto-match button — works with master OR history */}
+          {(hasmaster || hasHistory) && items.length > 0 && (
+            <button onClick={handleAutoMatch} style={{ ...s.btnGhost, color: "#60a5fa", borderColor: "rgba(96,165,250,0.2)" }}>
               {Icons.search({ sz: 14 })} Auto-Match
-              {unmatched > 0 && (
+              {missingHs > 0 && (
                 <span style={{ fontSize: 10, background: "rgba(239,68,68,0.15)", color: "#f87171", padding: "1px 6px", borderRadius: 10 }}>
-                  {unmatched}
+                  {missingHs}
                 </span>
               )}
             </button>
@@ -75,6 +193,25 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
           <button onClick={addItem} style={s.btnPrimary}>{Icons.plus({ sz: 15 })} Add Item</button>
         </div>
       </div>
+
+      {/* HS Code source status banner */}
+      {items.length > 0 && !hasmaster && (
+        <div style={{
+          marginBottom: 12, padding: "10px 16px", borderRadius: 8, fontSize: 12,
+          background: hasHistory ? "rgba(96,165,250,0.05)" : "rgba(245,158,11,0.06)",
+          border: `1px solid ${hasHistory ? "rgba(96,165,250,0.15)" : "rgba(245,158,11,0.15)"}`,
+          color: hasHistory ? "#60a5fa" : "#f59e0b",
+          display: "flex", alignItems: "center", gap: 10,
+        }}>
+          {hasHistory ? Icons.db({ sz: 14, c: "#60a5fa" }) : Icons.alert({ sz: 14, c: "#f59e0b" })}
+          <span>
+            {hasHistory
+              ? `No master data uploaded. Using ${historyCount} HS codes from previous declarations. Click Auto-Match to apply.`
+              : "No master data or HS history found. Enter HS codes manually or use the E-Tariff search to look up Thai Customs tariff codes."
+            }
+          </span>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div onPaste={handlePaste} tabIndex={0} style={{ ...s.card, textAlign: "center", padding: "50px 24px", border: "2px dashed rgba(52,211,153,0.2)", cursor: "text" }}>
@@ -90,69 +227,102 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
                 <tr>
-                  {["#", "Part#", "Description", "HS Code", "Thai", "Qty", "Unit$", "Duty%", "NW", "GW", "PO", ""].map((h, i) => (
+                  {["#", "Part#", "Description", "HS Code", "Thai", "Origin", "Qty", "Unit$", "Duty%", "NW", "GW", "PO", ""].map((h, i) => (
                     <th key={i} style={thStyle}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {items.map((it, idx) => (
-                  <tr key={it.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                    <td style={{ padding: "5px 6px", color: "#475569", fontSize: 10 }}>{idx + 1}</td>
-                    <td style={{ padding: 3 }}>
-                      <input value={it.pn} onChange={(e) => setField(it.id, "pn", e.target.value)}
-                        style={{ ...cellInput, width: 105, fontFamily: "monospace", color: it.ok ? "#34d399" : "#e2e8f0" }} />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input value={it.desc} onChange={(e) => setField(it.id, "desc", e.target.value)} style={{ ...cellInput, width: 170 }} />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input value={it.hs} onChange={(e) => setField(it.id, "hs", e.target.value)}
-                        style={{ ...cellInput, width: 95, fontFamily: "monospace", color: it.hs ? "#fbbf24" : "#64748b" }} />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input value={it.th} onChange={(e) => setField(it.id, "th", e.target.value)} style={{ ...cellInput, width: 130, color: "#a78bfa" }} />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input type="number" value={it.qty} onChange={(e) => setField(it.id, "qty", parseFloat(e.target.value) || 0)}
-                        style={{ ...cellInput, width: 50, textAlign: "right" }} />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input type="number" value={it.up} onChange={(e) => setField(it.id, "up", parseFloat(e.target.value) || 0)}
-                        style={{ ...cellInput, width: 70, textAlign: "right" }} step="0.01" />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input type="number" value={it.duty} onChange={(e) => setField(it.id, "duty", parseFloat(e.target.value) || 0)}
-                        style={{ ...cellInput, width: 50, textAlign: "right", color: it.duty > 0 ? "#fbbf24" : "#34d399" }} />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input type="number" value={it.nw} onChange={(e) => setField(it.id, "nw", parseFloat(e.target.value) || 0)}
-                        style={{ ...cellInput, width: 60, textAlign: "right" }} step="0.01" />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input type="number" value={it.gw} onChange={(e) => setField(it.id, "gw", parseFloat(e.target.value) || 0)}
-                        style={{ ...cellInput, width: 60, textAlign: "right" }} step="0.01" />
-                    </td>
-                    <td style={{ padding: 3 }}>
-                      <input value={it.po} onChange={(e) => setField(it.id, "po", e.target.value)} style={{ ...cellInput, width: 90, fontFamily: "monospace" }} />
-                    </td>
-                    <td style={{ padding: 3, whiteSpace: "nowrap" }}>
-                      <button onClick={() => duplicateItem(it.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 2 }}>
-                        {Icons.copy({ sz: 12 })}
-                      </button>
-                      <button onClick={() => deleteItem(it.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 2 }}>
-                        {Icons.trash({ sz: 12 })}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {items.map((it, idx) => {
+                  // Show hint if history has a match but item doesn't have HS
+                  const histHint = !it.hs && hsHistory[it.pn] ? hsHistory[it.pn].hs : null;
+
+                  return (
+                    <tr key={it.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                      <td style={{ padding: "5px 6px", color: "#475569", fontSize: 10 }}>{idx + 1}</td>
+                      <td style={{ padding: 3 }}>
+                        <input value={it.pn} onChange={(e) => setField(it.id, "pn", e.target.value)}
+                          style={{ ...cellInput, width: 105, fontFamily: "monospace", color: it.ok ? "#34d399" : "#e2e8f0" }} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input value={it.desc} onChange={(e) => setField(it.id, "desc", e.target.value)} style={{ ...cellInput, width: 160 }} />
+                      </td>
+                      <td style={{ padding: 3, position: "relative" }}>
+                        <input value={it.hs} onChange={(e) => setField(it.id, "hs", e.target.value)}
+                          placeholder={histHint || ""}
+                          style={{
+                            ...cellInput, width: 95, fontFamily: "monospace",
+                            color: it.hs ? "#fbbf24" : "#64748b",
+                            borderColor: !it.hs && it.pn ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.1)",
+                          }} />
+                        {histHint && !it.hs && (
+                          <button
+                            onClick={() => {
+                              const h = hsHistory[it.pn];
+                              setField(it.id, "hs", h.hs);
+                              if (h.th) setField(it.id, "th", h.th);
+                              if (h.duty) setField(it.id, "duty", h.duty);
+                              if (h.org) setField(it.id, "org", h.org);
+                            }}
+                            title={`Apply ${histHint} from history`}
+                            style={{
+                              position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)",
+                              background: "rgba(96,165,250,0.15)", border: "none", borderRadius: 3,
+                              color: "#60a5fa", cursor: "pointer", fontSize: 9, padding: "1px 4px", fontWeight: 700,
+                            }}
+                          >
+                            ↩
+                          </button>
+                        )}
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input value={it.th} onChange={(e) => setField(it.id, "th", e.target.value)} style={{ ...cellInput, width: 120, color: "#a78bfa" }} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input value={it.org || hdr.origin || ""} onChange={(e) => setField(it.id, "org", e.target.value)}
+                          style={{ ...cellInput, width: 36, textAlign: "center", textTransform: "uppercase", fontSize: 10, color: "#94a3b8" }} maxLength={2} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input type="number" value={it.qty} onChange={(e) => setField(it.id, "qty", parseFloat(e.target.value) || 0)}
+                          style={{ ...cellInput, width: 50, textAlign: "right" }} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input type="number" value={it.up} onChange={(e) => setField(it.id, "up", parseFloat(e.target.value) || 0)}
+                          style={{ ...cellInput, width: 70, textAlign: "right" }} step="0.01" />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input type="number" value={it.duty} onChange={(e) => setField(it.id, "duty", parseFloat(e.target.value) || 0)}
+                          style={{ ...cellInput, width: 50, textAlign: "right", color: it.duty > 0 ? "#fbbf24" : "#34d399" }} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input type="number" value={it.nw} onChange={(e) => setField(it.id, "nw", parseFloat(e.target.value) || 0)}
+                          style={{ ...cellInput, width: 55, textAlign: "right" }} step="0.01" />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input type="number" value={it.gw} onChange={(e) => setField(it.id, "gw", parseFloat(e.target.value) || 0)}
+                          style={{ ...cellInput, width: 55, textAlign: "right" }} step="0.01" />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input value={it.po} onChange={(e) => setField(it.id, "po", e.target.value)} style={{ ...cellInput, width: 80, fontFamily: "monospace" }} />
+                      </td>
+                      <td style={{ padding: 3, whiteSpace: "nowrap" }}>
+                        <button onClick={() => duplicateItem(it.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 2 }}>
+                          {Icons.copy({ sz: 12 })}
+                        </button>
+                        <button onClick={() => deleteItem(it.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 2 }}>
+                          {Icons.trash({ sz: 12 })}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 20, fontSize: 12, alignItems: "center" }}>
             <span style={{ color: "#64748b" }}>Total: <b style={{ color: "#fbbf24" }}>${fmt(totalInv)}</b></span>
-            {unmatched > 0 && (
-              <span style={{ color: "#f87171" }}>{Icons.alert({ sz: 13, c: "#f87171" })} {unmatched} need HS</span>
+            {missingHs > 0 && (
+              <span style={{ color: "#f87171" }}>{Icons.alert({ sz: 13, c: "#f87171" })} {missingHs} need HS</span>
             )}
             <div style={{ flex: 1 }} />
             <button onClick={addItem} style={{ ...s.btnGhost, padding: "4px 10px", fontSize: 11 }}>{Icons.plus({ sz: 12 })} Row</button>
@@ -162,7 +332,7 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
 
       <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between" }}>
         <button onClick={() => setPg("shipment")} style={s.btnGhost}>← Shipment</button>
-        <button onClick={() => setPg("declaration")} style={s.btnPrimary}>Generate Declaration {Icons.zap({ sz: 15 })}</button>
+        <button onClick={handleToDeclare} style={s.btnPrimary}>Generate Declaration {Icons.zap({ sz: 15 })}</button>
       </div>
     </div>
   );

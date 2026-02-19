@@ -31,6 +31,7 @@ export default function ShipmentPage({ hdr, sH, setPg }) {
           Parties
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Customer / Client" value={hdr.customer} onChange={(v) => sH("customer", v)} placeholder="e.g. Electrolux, Samsung" />
           <Field label="Shipper" value={hdr.shipper} onChange={(v) => sH("shipper", v)} />
           <Field label="Consignee (Importer)" value={hdr.consignee} onChange={(v) => sH("consignee", v)} />
           <Field label="Tax ID" value={hdr.taxId} onChange={(v) => sH("taxId", v)} placeholder="13-digit" />

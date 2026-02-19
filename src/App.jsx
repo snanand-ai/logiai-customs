@@ -14,6 +14,7 @@ const INITIAL_HEADER = {
   pkgs: 0, pkgUnit: "CARTON", eta: "",
   invNo: "", invDate: "", origin: "CN",
   freight: 0, insurance: 0, priv: "NONE", permit: "", ctr: "",
+  customer: "",
 };
 
 export default function App() {

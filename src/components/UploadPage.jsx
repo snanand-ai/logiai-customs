@@ -9,7 +9,7 @@ import { uid } from "../utils/format";
 const DOC_STATUS_CONFIG = [
   { key: "ci", label: "Commercial Invoice", icon: Icons.grid, required: true, color: "#60a5fa" },
   { key: "bl", label: "Bill of Lading", icon: Icons.anchor, required: true, color: "#fbbf24" },
-  { key: "master", label: "Master Data (HS Codes)", icon: Icons.db, required: true, color: "#a78bfa" },
+  { key: "master", label: "Master Data (HS Codes)", icon: Icons.db, required: false, color: "#a78bfa" },
   { key: "freight", label: "Freight Invoice", icon: Icons.dollar, required: false, color: "#34d399" },
   { key: "drkw", label: "Previous DRKW", icon: Icons.file, required: false, color: "#f472b6" },
 ];
@@ -337,6 +337,12 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
         {missingRequired.length === 0 && docs.ci && (
           <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(52,211,153,0.15)", borderRadius: 8, fontSize: 12, color: "#34d399", display: "flex", alignItems: "center", gap: 8 }}>
             {Icons.check({ sz: 16, c: "#34d399" })} All required documents uploaded — ready to proceed!
+          </div>
+        )}
+        {!docs.master && docs.ci && (
+          <div style={{ marginTop: 8, padding: "10px 14px", background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 8, fontSize: 12, color: "#a78bfa", display: "flex", alignItems: "center", gap: 8 }}>
+            {Icons.db({ sz: 14, c: "#a78bfa" })}
+            <span>No master data? You can enter HS codes manually on the Items page, or search the <b>Thai Customs E-Tariff</b> database.</span>
           </div>
         )}
       </div>
