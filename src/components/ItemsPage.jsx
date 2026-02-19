@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Icons from "./Icons";
+import HsInsight from "./intelligence/HsInsight";
 import { s } from "../constants/styles";
 import { fmt, uid } from "../utils/format";
 import { loadTariff, lookupHS, isTariffLoaded, getTariffCount } from "../utils/hsLookup";
@@ -54,7 +55,7 @@ function saveHsHistory(items, customer) {
   return saved;
 }
 
-export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile, setPg }) {
+export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile, setPg, hsInsight, onStatusAdvance }) {
   const mdArr = Object.entries(md);
   const missingHs = items.filter((i) => !i.hs && i.pn).length;
   const unmatched = items.filter((i) => !i.ok && i.pn).length;
@@ -114,6 +115,7 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
   // Save to history when navigating to declaration
   const handleToDeclare = () => {
     saveHsHistory(items, hdr.customer || hdr.consignee || "");
+    if (onStatusAdvance) onStatusAdvance();
     setPg("declaration");
   };
 
@@ -333,6 +335,10 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
                             </button>
                           )}
                         </div>
+                        {/* HS intelligence insight */}
+                        {hsInsight && it.hs && it.hs.replace(/[\s.\-]/g, "").length >= 4 && (
+                          <HsInsight hsCode={it.hs} getInsight={hsInsight} />
+                        )}
                         {histHint && !it.hs && (
                           <button
                             onClick={() => {

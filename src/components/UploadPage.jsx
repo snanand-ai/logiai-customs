@@ -14,7 +14,7 @@ const DOC_STATUS_CONFIG = [
   { key: "drkw", label: "Previous DRKW", icon: Icons.file, required: false, color: "#f472b6" },
 ];
 
-export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, items, setItems, md, setMd, hdr, setHdr, msg, setPg }) {
+export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, items, setItems, md, setMd, hdr, setHdr, msg, setPg, onStatusAdvance }) {
   const inputRef = useRef();
   const uploading = useRef(false);
 
@@ -364,7 +364,7 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
 
       <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", gap: 10 }}>
         {items.length > 0 ? (
-          <button onClick={() => setPg("shipment")} style={s.btnPrimary}>
+          <button onClick={() => { if (onStatusAdvance) onStatusAdvance(); setPg("shipment"); }} style={s.btnPrimary}>
             Continue to Shipment {Icons.zap({ sz: 15 })}
           </button>
         ) : (

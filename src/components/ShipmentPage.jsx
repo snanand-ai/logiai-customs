@@ -1,9 +1,10 @@
 import { Field, Select } from "./FormControls";
 import Icons from "./Icons";
+import LaneInsight from "./intelligence/LaneInsight";
 import { s } from "../constants/styles";
 import { PRIVILEGES, INCOTERMS, CURRENCIES } from "../constants/privileges";
 
-export default function ShipmentPage({ hdr, sH, setPg }) {
+export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
   return (
     <div style={{ animation: "fadeIn .3s ease" }}>
       <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 20px" }}>Shipment Details</h2>
@@ -23,6 +24,11 @@ export default function ShipmentPage({ hdr, sH, setPg }) {
           <Field label="Arrival Date" value={hdr.eta} onChange={(v) => sH("eta", v)} type="date" />
           <Field label="Origin Country" value={hdr.origin} onChange={(v) => sH("origin", v)} />
         </div>
+        {laneInsight && hdr.origin && (
+          <div style={{ marginTop: 12 }}>
+            <LaneInsight origin={hdr.origin} destination="TH" getInsight={laneInsight} />
+          </div>
+        )}
       </div>
 
       {/* Parties */}

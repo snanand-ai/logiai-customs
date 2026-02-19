@@ -23,6 +23,10 @@ const Icons = {
   dollar: (p = {}) => <SvgIcon {...p} d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />,
   anchor: (p = {}) => <SvgIcon {...p} d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 8v14M5 12H2a10 10 0 0 0 20 0h-3" />,
   book: (p = {}) => <SvgIcon {...p} d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" />,
+  home: (p = {}) => <SvgIcon {...p} d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
+  clock: (p = {}) => <SvgIcon {...p} d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 6v6l4 2" />,
+  trending: (p = {}) => <SvgIcon {...p} d="M23 6l-9.5 9.5-5-5L1 18" />,
+  layers: (p = {}) => <SvgIcon {...p} d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />,
 };
 
 export default Icons;

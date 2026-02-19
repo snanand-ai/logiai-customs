@@ -42,4 +42,24 @@ export const s = {
     outline: "none",
     boxSizing: "border-box",
   },
+  // Dashboard card
+  dashboardCard: {
+    background: "rgba(255,255,255,0.025)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: 10,
+    padding: 16,
+    cursor: "pointer",
+    transition: "all .15s ease",
+  },
+  // Intelligence insight pill
+  insightPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    fontSize: 9,
+    fontWeight: 600,
+    borderRadius: 10,
+    padding: "2px 8px",
+    whiteSpace: "nowrap",
+  },
 };

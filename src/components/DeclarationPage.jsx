@@ -1,4 +1,5 @@
 import Icons from "./Icons";
+import PrivilegeInsight from "./intelligence/PrivilegeInsight";
 import { s } from "../constants/styles";
 import { fmt, fmtThb } from "../utils/format";
 import { calculateDeclaration } from "../utils/calculations";
@@ -20,7 +21,7 @@ const FV = ({ label, value, wide }) => (
   </div>
 );
 
-export default function DeclarationPage({ items, hdr, setPg }) {
+export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordFiling, loadPrivilegeSavings, onStatusAdvance }) {
   if (items.length === 0) {
     return (
       <div style={{ animation: "fadeIn .3s ease" }}>
@@ -143,6 +144,14 @@ export default function DeclarationPage({ items, hdr, setPg }) {
     a.download = `Declaration_${hdr.invNo || "draft"}_${new Date().toISOString().split("T")[0]}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
+
+    // Record filing in intelligence layer
+    if (recordFiling) {
+      recordFiling({ hdr, items }, { details, totals, privilege }).catch(
+        (err) => console.warn("[Declaration] Intelligence record failed:", err)
+      );
+    }
+    if (onStatusAdvance) onStatusAdvance();
   };
 
   return (
@@ -198,6 +207,13 @@ export default function DeclarationPage({ items, hdr, setPg }) {
           <span style={{ fontSize: 13, fontWeight: 600, color: "#6ee7b7" }}>
             {privilege.label} — saving {fmtThb(totals.savings)}
           </span>
+        </div>
+      )}
+
+      {/* Intelligence: Privilege savings from past declarations */}
+      {loadPrivilegeSavings && (
+        <div style={{ marginBottom: 14 }}>
+          <PrivilegeInsight loadSavings={loadPrivilegeSavings} />
         </div>
       )}
 
