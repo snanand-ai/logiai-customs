@@ -25,7 +25,16 @@ export function detectFileType(file, sheetData) {
     const { names, sh } = sheetData;
     const allHeaders = [];
     names.forEach((n) => {
-      if (sh[n]?.length > 0) allHeaders.push(...Object.keys(sh[n][0]).map((h) => h.toLowerCase()));
+      if (sh[n]?.length > 0) {
+        const headers = Object.keys(sh[n][0]).map((h) => h.toLowerCase());
+        allHeaders.push(...headers);
+        // Also scan values in first few rows for keywords (handles merged-cell files)
+        sh[n].slice(0, 5).forEach((row) => {
+          Object.values(row).forEach((v) => {
+            if (v && typeof v === "string") allHeaders.push(v.toLowerCase());
+          });
+        });
+      }
     });
     const joined = allHeaders.join(" ");
 

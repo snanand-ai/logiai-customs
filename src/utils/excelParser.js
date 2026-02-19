@@ -9,14 +9,103 @@ const readBuffer = (file) =>
   });
 
 /**
+ * Known keywords that indicate a real header row (case-insensitive).
+ * If a row contains 3+ of these, it's very likely the header.
+ */
+const HEADER_KEYWORDS = [
+  "part", "material", "article", "sku", "product",
+  "desc", "description", "item", "goods",
+  "qty", "quantity", "pcs", "units",
+  "price", "unit price", "amount", "value", "cost",
+  "weight", "n.w", "g.w", "nw", "gw",
+  "po", "purchase order", "order",
+  "hs", "tariff", "harmonized",
+  "duty", "rate", "tax",
+  "thai", "origin", "country",
+  "cif", "vat", "customs",
+];
+
+/**
+ * Scan a sheet's raw cells to find the header row.
+ * Returns the 0-based row index, or 0 if no clear header found.
+ */
+function detectHeaderRow(sheet) {
+  const ref = sheet["!ref"];
+  if (!ref) return 0;
+  const range = XLSX.utils.decode_range(ref);
+  const maxScanRow = Math.min(range.e.r, 30); // scan first 30 rows only
+  let bestRow = 0;
+  let bestScore = 0;
+
+  for (let r = 0; r <= maxScanRow; r++) {
+    let score = 0;
+    let nonEmpty = 0;
+    for (let c = range.s.c; c <= Math.min(range.e.c, 30); c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = sheet[addr];
+      if (!cell || cell.v === "" || cell.v === undefined) continue;
+      nonEmpty++;
+      const val = String(cell.v).toLowerCase().trim();
+      for (const kw of HEADER_KEYWORDS) {
+        if (val.includes(kw)) { score++; break; }
+      }
+    }
+    // Require at least 3 keyword matches and at least 3 non-empty cells
+    if (score > bestScore && score >= 3 && nonEmpty >= 3) {
+      bestScore = score;
+      bestRow = r;
+    }
+  }
+  return bestRow;
+}
+
+/**
+ * Parse a single sheet starting from the detected header row.
+ * Returns an array of row objects keyed by header values.
+ */
+function parseSheetWithHeaderDetection(sheet) {
+  const headerRow = detectHeaderRow(sheet);
+  // Use sheet_to_json with a range starting from the header row
+  const ref = sheet["!ref"];
+  if (!ref) return [];
+  const range = XLSX.utils.decode_range(ref);
+  range.s.r = headerRow; // set start row to detected header
+  const newRef = XLSX.utils.encode_range(range);
+  // Create a shallow copy with adjusted ref
+  const adjusted = Object.assign({}, sheet, { "!ref": newRef });
+  return XLSX.utils.sheet_to_json(adjusted, { defval: "" });
+}
+
+/**
  * Parse an Excel or CSV file into { names: string[], sh: Record<string, object[]> }
+ * Handles merged-cell files by auto-detecting the header row.
  */
 export async function parseExcel(file) {
   const buf = await readBuffer(file);
   const wb = XLSX.read(buf, { type: "array" });
   const sh = {};
   wb.SheetNames.forEach((name) => {
-    sh[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: "" });
+    const sheet = wb.Sheets[name];
+    const defaultParse = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    // Check if default parse produced usable headers
+    if (defaultParse.length > 0) {
+      const headers = Object.keys(defaultParse[0]);
+      const junkHeaders = headers.filter((h) => /^__EMPTY/.test(h)).length;
+      // If >50% of headers are __EMPTY, try smart header detection
+      if (junkHeaders > headers.length * 0.5) {
+        const smartParse = parseSheetWithHeaderDetection(sheet);
+        if (smartParse.length > 0) {
+          const smartHeaders = Object.keys(smartParse[0]);
+          const smartJunk = smartHeaders.filter((h) => /^__EMPTY/.test(h)).length;
+          if (smartJunk < smartHeaders.length * 0.5) {
+            sh[name] = smartParse;
+            return;
+          }
+        }
+      }
+    }
+    sh[name] = defaultParse;
   });
   return { names: wb.SheetNames, sh };
 }
