@@ -334,7 +334,7 @@ export function extractHeaderMetadata(file, wb) {
 export const MASTER_COLUMNS = {
   partNo: ["part", "material", "item", "sku", "product", "article", "customer material"],
   hsCode: ["hs", "tariff", "hts", "customs code", "harmonized"],
-  thaiDesc: ["thai", "th desc", "คำอธิบาย", "รายละเอียด", "local desc"],
+  thaiDesc: ["(th)", "thai", "th desc", "th name", "thai desc", "thai name", "คำอธิบาย", "รายละเอียด", "local desc"],
   dutyRate: ["duty", "rate", "tax rate"],
   origin: ["origin", "country", "coo"],
 };
