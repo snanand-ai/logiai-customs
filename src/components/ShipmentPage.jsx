@@ -2,12 +2,36 @@ import { Field, Select } from "./FormControls";
 import Icons from "./Icons";
 import LaneInsight from "./intelligence/LaneInsight";
 import { s } from "../constants/styles";
-import { PRIVILEGES, INCOTERMS, CURRENCIES } from "../constants/privileges";
+import { PRIVILEGES, INCOTERMS, CURRENCIES, DECLARATION_TYPES, TRANSPORT_MODES } from "../constants/privileges";
 
 export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
+  const isSea = (hdr.transportMode || "SEA") === "SEA";
+  const isExport = hdr.declarationType === "EXPORT";
+
   return (
     <div style={{ animation: "fadeIn .3s ease" }}>
       <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 20px" }}>Shipment Details</h2>
+
+      {/* Declaration Type & Transport Mode */}
+      <div style={{ ...s.card, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#6ee7b7", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Declaration
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Select
+            label="Declaration Type"
+            value={hdr.declarationType || "IMPORT"}
+            onChange={(v) => sH("declarationType", v)}
+            options={DECLARATION_TYPES.map((d) => ({ value: d.code, label: d.label }))}
+          />
+          <Select
+            label="Transport Mode"
+            value={hdr.transportMode || "SEA"}
+            onChange={(v) => sH("transportMode", v)}
+            options={TRANSPORT_MODES.map((t) => ({ value: t.code, label: t.label }))}
+          />
+        </div>
+      </div>
 
       {/* Transport */}
       <div style={{ ...s.card, marginBottom: 16 }}>
@@ -15,13 +39,13 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
           Transport
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
-          <Field label="B/L Number" value={hdr.blNo} onChange={(v) => sH("blNo", v)} placeholder="e.g. 1070749239" />
-          <Field label="Vessel" value={hdr.vessel} onChange={(v) => sH("vessel", v)} />
-          <Field label="Voyage" value={hdr.voyage} onChange={(v) => sH("voyage", v)} />
-          <Field label="Container" value={hdr.ctr} onChange={(v) => sH("ctr", v)} />
-          <Field label="Port of Loading" value={hdr.pol} onChange={(v) => sH("pol", v)} />
-          <Field label="Port of Discharge" value={hdr.pod} onChange={(v) => sH("pod", v)} />
-          <Field label="Arrival Date" value={hdr.eta} onChange={(v) => sH("eta", v)} type="date" />
+          <Field label={isSea ? "B/L Number" : "Ref / Waybill No"} value={hdr.blNo} onChange={(v) => sH("blNo", v)} placeholder={isSea ? "e.g. 1070749239" : "e.g. TRK-001"} />
+          {isSea && <Field label="Vessel" value={hdr.vessel} onChange={(v) => sH("vessel", v)} />}
+          {isSea && <Field label="Voyage" value={hdr.voyage} onChange={(v) => sH("voyage", v)} />}
+          <Field label="Container / Vehicle" value={hdr.ctr} onChange={(v) => sH("ctr", v)} />
+          <Field label={isExport ? "Loading Port" : "Port of Loading"} value={hdr.pol} onChange={(v) => sH("pol", v)} />
+          <Field label={isExport ? "Destination" : "Port of Discharge"} value={hdr.pod} onChange={(v) => sH("pod", v)} />
+          <Field label={isExport ? "Export Date" : "Arrival Date"} value={hdr.eta} onChange={(v) => sH("eta", v)} type="date" />
           <Field label="Origin Country" value={hdr.origin} onChange={(v) => sH("origin", v)} />
         </div>
         {laneInsight && hdr.origin && (
@@ -42,6 +66,8 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
           <Field label="Consignee (Importer)" value={hdr.consignee} onChange={(v) => sH("consignee", v)} />
           <Field label="Tax ID" value={hdr.taxId} onChange={(v) => sH("taxId", v)} placeholder="13-digit" />
           <Field label="Customs Broker" value={hdr.broker} onChange={(v) => sH("broker", v)} />
+          <Field label="Branch Code สาขา" value={hdr.branchCode} onChange={(v) => sH("branchCode", v)} placeholder="e.g. 00000" />
+          <Field label="AEO Number" value={hdr.aeoNumber} onChange={(v) => sH("aeoNumber", v)} placeholder="e.g. THCB570059" />
         </div>
       </div>
 
@@ -105,9 +131,14 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
                 options={PRIVILEGES.map((p) => ({ value: p.code, label: p.label }))}
               />
             </div>
-            {(hdr.priv === "FZ" || hdr.priv === "BOI") && (
+            {hdr.priv !== "NONE" && (
               <div style={{ gridColumn: "1/-1" }}>
                 <Field label="Permit / License #" value={hdr.permit} onChange={(v) => sH("permit", v)} />
+              </div>
+            )}
+            {(hdr.priv === "TAXINCEN" || hdr.priv === "FZ" || hdr.priv === "EPZ") && (
+              <div style={{ gridColumn: "1/-1" }}>
+                <Field label="Tax Incentive Ref เลขอ้างอิงสิทธิ์" value={hdr.taxIncentiveRef} onChange={(v) => sH("taxIncentiveRef", v)} placeholder="e.g. F5302180400004" />
               </div>
             )}
           </div>

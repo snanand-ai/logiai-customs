@@ -3,6 +3,7 @@ import PrivilegeInsight from "./intelligence/PrivilegeInsight";
 import { s } from "../constants/styles";
 import { fmt, fmtThb } from "../utils/format";
 import { calculateDeclaration } from "../utils/calculations";
+import { DECLARATION_TYPES } from "../constants/privileges";
 import * as XLSX from "xlsx";
 
 const thStyle = {
@@ -34,10 +35,14 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
     );
   }
 
-  const { details, totals, privilege } = calculateDeclaration(items, hdr);
+  const { details, totals, privilege, declType } = calculateDeclaration(items, hdr);
   const fx = parseFloat(hdr.fx) || 1;
   const totalNW = items.reduce((s, i) => s + (parseFloat(i.nw) || 0), 0);
   const totalGW = items.reduce((s, i) => s + (parseFloat(i.gw) || 0), 0);
+  const declInfo = DECLARATION_TYPES.find((d) => d.code === declType) || DECLARATION_TYPES[0];
+  const isExport = declType === "EXPORT";
+  const isEpz = declType === "EPZ";
+  const valuationLabel = isExport ? "FOB" : "CIF";
 
   // ---------- EXCEL EXPORT ----------
   const exportExcel = () => {
@@ -45,7 +50,7 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
 
     // Sheet 1: Declaration Header
     const headerData = [
-      ["LogiAI Customs — Import Declaration กศก 99/1"],
+      [`LogiAI Customs — ${declInfo.label}`],
       [],
       ["TRANSPORT"],
       ["B/L Number", hdr.blNo || ""],
@@ -78,8 +83,10 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
       ["Permit / License", hdr.permit || "N/A"],
       [],
       ["TAX SUMMARY"],
-      ["Total CIF (THB)", totals.cif],
-      ["Import Duty อากรขาเข้า (THB)", totals.duty],
+      [`Total ${valuationLabel} (THB)`, totals.cif],
+      [isExport ? "Export Duty อากรขาออก (THB)" : "Import Duty อากรขาเข้า (THB)", totals.duty],
+      ["Excise Tax ภาษีสรรพสามิต (THB)", totals.excise],
+      ["Interior Tax ภาษีเพื่อมหาดไทย (THB)", totals.interior],
       ["VAT ภาษีมูลค่าเพิ่ม (THB)", totals.vat],
       ["Total Tax รวมทั้งสิ้น (THB)", totals.tax],
       [],
@@ -159,9 +166,11 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
       {/* Header row with title + export */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Import Declaration</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+            {isExport ? "Export" : isEpz ? "EPZ Transfer" : "Import"} Declaration
+          </h2>
           <p style={{ fontSize: 12, color: "#64748b", margin: "3px 0 0" }}>
-            กศก 99/1 · {items.length} items · {hdr.consignee || "—"}
+            {declInfo.formNo} · {items.length} items · {hdr.consignee || "—"}
           </p>
         </div>
         <button onClick={exportExcel} style={{ ...s.btnPrimary, display: "flex", alignItems: "center", gap: 6 }}>
@@ -170,11 +179,15 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: totals.excise > 0 ? "repeat(7,1fr)" : "repeat(5,1fr)", gap: 10, marginBottom: 16 }}>
         {[
           ["Items", items.length, "#34d399"],
-          ["CIF", fmtThb(totals.cif), "#60a5fa"],
+          [valuationLabel, fmtThb(totals.cif), "#60a5fa"],
           ["Duty", fmtThb(totals.duty), totals.duty > 0 ? "#f87171" : "#34d399"],
+          ...(totals.excise > 0 ? [
+            ["Excise", fmtThb(totals.excise), "#f87171"],
+            ["Interior", fmtThb(totals.interior), "#f87171"],
+          ] : []),
           ["VAT", fmtThb(totals.vat), totals.vat > 0 ? "#fbbf24" : "#34d399"],
           ["Total Tax", fmtThb(totals.tax), totals.tax > 0 ? "#f87171" : "#34d399"],
         ].map(([label, value, color], i) => (
@@ -223,7 +236,7 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr>
-                {["#", "Part", "HS", "Desc", "Thai", "Origin", "Qty", "NW", "GW", `Amt(${hdr.currency})`, "CIF(THB)", "Duty%", "Duty", "VAT", "Tax"].map((h, i) => (
+                {["#", "Part", "HS", "Desc", "Thai", "Origin", "Qty", "NW", "GW", `Amt(${hdr.currency})`, `${valuationLabel}(THB)`, "Duty%", "Duty", "Excise", "Interior", "VAT", "Tax"].map((h, i) => (
                   <th key={i} style={{ ...thStyle, textAlign: i >= 6 ? "right" : "left" }}>{h}</th>
                 ))}
               </tr>
@@ -250,6 +263,8 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
                   <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600 }}>{fmt(it.cifTHB, 0)}</td>
                   <td style={{ padding: "5px 6px", textAlign: "right", color: it.appliedDutyRate > 0 ? "#f87171" : "#34d399", fontWeight: 600 }}>{it.appliedDutyRate}%</td>
                   <td style={{ padding: "5px 6px", textAlign: "right", color: it.dutyAmount > 0 ? "#f87171" : "#34d399" }}>{fmt(it.dutyAmount, 0)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", color: it.exciseAmount > 0 ? "#f87171" : "#475569" }}>{fmt(it.exciseAmount, 0)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", color: it.interiorAmount > 0 ? "#f87171" : "#475569" }}>{fmt(it.interiorAmount, 0)}</td>
                   <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmt(it.vatAmount, 0)}</td>
                   <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 700, color: it.totalTax > 0 ? "#f87171" : "#34d399" }}>{fmt(it.totalTax, 0)}</td>
                 </tr>
@@ -265,6 +280,8 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700, color: "#60a5fa" }}>{fmt(totals.cif, 0)}</td>
                 <td></td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.duty, 0)}</td>
+                <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.excise, 0)}</td>
+                <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.interior, 0)}</td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.vat, 0)}</td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 800, fontSize: 13, color: totals.tax > 0 ? "#f87171" : "#34d399" }}>{fmtThb(totals.tax)}</td>
               </tr>
@@ -276,8 +293,10 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
       {/* Official form preview — COMPLETE */}
       <div style={{ background: "#fefefe", borderRadius: 10, padding: 24, color: "#1a1a2e", boxShadow: "0 8px 40px rgba(0,0,0,0.4)" }}>
         <div style={{ textAlign: "center", borderBottom: "3px solid #c6952e", paddingBottom: 12, marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#8B6914" }}>ใบขนสินค้าขาเข้า กศก 99/1</div>
-          <div style={{ fontSize: 10, color: "#999", marginTop: 2 }}>Import Declaration — Form Kor Sor Kor 99/1</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#8B6914" }}>
+            {isExport ? "ใบขนสินค้าขาออก" : isEpz ? "ใบขนโอนย้ายเข้าเขตปลอดอากร" : "ใบขนสินค้าขาเข้า"} {declInfo.formNo}
+          </div>
+          <div style={{ fontSize: 10, color: "#999", marginTop: 2 }}>{declInfo.label}</div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
@@ -323,7 +342,7 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
               <FV label="Invoice Value มูลค่าสินค้า" value={`${hdr.currency} ${fmt(totals.invoiceValue)}`} />
               <FV label="Freight ค่าระวาง" value={`${hdr.currency} ${fmt(parseFloat(hdr.freight) || 0)}`} />
               <FV label="Insurance ค่าประกันภัย" value={hdr.insurance ? `${hdr.currency} ${fmt(parseFloat(hdr.insurance))}` : "Auto 0.3%"} />
-              <FV label="Total CIF ราคา CIF" value={fmtThb(totals.cif)} />
+              <FV label={`Total ${valuationLabel} ราคา ${valuationLabel}`} value={fmtThb(totals.cif)} />
             </div>
 
             {/* Weights */}
@@ -358,8 +377,9 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
                 ภาษีอากรที่ต้องชำระ
               </div>
               {[
-                ["อากรขาเข้า Import Duty", fmtThb(totals.duty)],
-                ["ภาษีสรรพสามิต Excise", "฿0.00"],
+                [isExport ? "อากรขาออก Export Duty" : "อากรขาเข้า Import Duty", fmtThb(totals.duty)],
+                ["ภาษีสรรพสามิต Excise", fmtThb(totals.excise)],
+                ["ภาษีเพื่อมหาดไทย Interior", fmtThb(totals.interior)],
                 ["ภาษีมูลค่าเพิ่ม VAT 7%", fmtThb(totals.vat)],
               ].map(([label, val], i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 11, alignItems: "baseline" }}>

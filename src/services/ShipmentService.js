@@ -18,6 +18,8 @@ function uid() {
 
 /** Default header matching INITIAL_HEADER in App.jsx */
 const DEFAULT_HEADER = {
+  declarationType: "IMPORT",
+  transportMode: "SEA",
   blNo: "", vessel: "", voyage: "", pol: "", pod: "",
   shipper: "", consignee: "", taxId: "", broker: "",
   incoterm: "CIF", currency: "USD", fx: 32.61,
@@ -25,6 +27,8 @@ const DEFAULT_HEADER = {
   invNo: "", invDate: "", origin: "CN",
   freight: 0, insurance: 0, priv: "NONE", permit: "", ctr: "",
   customer: "",
+  aeoNumber: "", branchCode: "",
+  taxIncentiveRef: "",
 };
 
 /**
