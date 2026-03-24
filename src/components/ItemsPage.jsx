@@ -107,7 +107,7 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
   };
 
   const addItem = () =>
-    setItems((p) => [...p, { id: uid(), pn: "", desc: "", th: "", qty: 1, up: 0, nw: 0, gw: 0, po: "", hs: "", duty: 0, exciseRate: 0, org: hdr.origin || "CN", ok: false }]);
+    setItems((p) => [...p, { id: uid(), pn: "", desc: "", th: "", qty: 1, up: 0, nw: 0, gw: 0, po: "", hs: "", duty: 0, exciseRate: 0, adRate: 0, cvdRate: 0, qtyUnit: "PCE", statSuffix: "", org: hdr.origin || "CN", ok: false }]);
 
   const setField = (id, key, value) =>
     setItems((p) => p.map((i) => (i.id === id ? { ...i, [key]: value } : i)));
@@ -155,7 +155,7 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
       nw: parseFloat(cols[4]) || 0,
       gw: parseFloat(cols[5]) || 0,
       po: (cols[6] || "").trim(),
-      hs: "", th: "", duty: 0, exciseRate: 0, org: hdr.origin || "CN", ok: false,
+      hs: "", th: "", duty: 0, exciseRate: 0, adRate: 0, cvdRate: 0, qtyUnit: "PCE", statSuffix: "", org: hdr.origin || "CN", ok: false,
     })).filter((i) => i.pn);
     if (newItems.length) setItems((p) => [...p, ...newItems]);
   };
@@ -257,7 +257,7 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
                 <tr>
-                  {["#", "Part#", "Description", "HS Code", "Thai", "Origin", "Qty", "Unit$", "Duty%", "Excise%", "NW", "GW", "PO", ""].map((h, i) => (
+                  {["#", "Part#", "Description", "HS Code", "Stat", "Thai", "Origin", "Qty", "Unit", "Unit$", "Duty%", "AD%", "CVD%", "Excise%", "NW", "GW", "PO", ""].map((h, i) => (
                     <th key={i} style={thStyle}>{h}</th>
                   ))}
                 </tr>
@@ -333,27 +333,45 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
                         )}
                       </td>
                       <td style={{ padding: 3 }}>
-                        <input value={it.th} onChange={(e) => setField(it.id, "th", e.target.value)} style={{ ...cellInput, width: 120, color: "#7c3aed" }} />
+                        <input value={it.statSuffix || ""} onChange={(e) => setField(it.id, "statSuffix", e.target.value)}
+                          style={{ ...cellInput, width: 36, textAlign: "center", fontFamily: "monospace", fontSize: 10 }} maxLength={3} placeholder="000" />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input value={it.th} onChange={(e) => setField(it.id, "th", e.target.value)} style={{ ...cellInput, width: 100, color: "#7c3aed" }} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input value={it.org || hdr.origin || ""} onChange={(e) => setField(it.id, "org", e.target.value)}
-                          style={{ ...cellInput, width: 36, textAlign: "center", textTransform: "uppercase", fontSize: 10, color: "#5a5a7a" }} maxLength={2} />
+                          style={{ ...cellInput, width: 30, textAlign: "center", textTransform: "uppercase", fontSize: 10, color: "#5a5a7a" }} maxLength={2} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.qty} onChange={(e) => setField(it.id, "qty", parseFloat(e.target.value) || 0)}
-                          style={{ ...cellInput, width: 50, textAlign: "right" }} />
+                          style={{ ...cellInput, width: 45, textAlign: "right" }} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <select value={it.qtyUnit || "PCE"} onChange={(e) => setField(it.id, "qtyUnit", e.target.value)}
+                          style={{ ...cellInput, width: 52, fontSize: 9, padding: "4px 2px" }}>
+                          {["PCE","KGM","SET","LTR","MTR","PRS","UNT","TNE"].map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.up} onChange={(e) => setField(it.id, "up", parseFloat(e.target.value) || 0)}
-                          style={{ ...cellInput, width: 70, textAlign: "right" }} step="0.01" />
+                          style={{ ...cellInput, width: 65, textAlign: "right" }} step="0.01" />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.duty} onChange={(e) => setField(it.id, "duty", parseFloat(e.target.value) || 0)}
-                          style={{ ...cellInput, width: 50, textAlign: "right", color: it.duty > 0 ? "#c6952e" : "#15803d" }} />
+                          style={{ ...cellInput, width: 45, textAlign: "right", color: it.duty > 0 ? "#c6952e" : "#15803d" }} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input type="number" value={it.adRate || 0} onChange={(e) => setField(it.id, "adRate", parseFloat(e.target.value) || 0)}
+                          style={{ ...cellInput, width: 40, textAlign: "right", color: (it.adRate || 0) > 0 ? "#dc2626" : "#8a8aa0" }} />
+                      </td>
+                      <td style={{ padding: 3 }}>
+                        <input type="number" value={it.cvdRate || 0} onChange={(e) => setField(it.id, "cvdRate", parseFloat(e.target.value) || 0)}
+                          style={{ ...cellInput, width: 40, textAlign: "right", color: (it.cvdRate || 0) > 0 ? "#dc2626" : "#8a8aa0" }} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.exciseRate || 0} onChange={(e) => setField(it.id, "exciseRate", parseFloat(e.target.value) || 0)}
-                          style={{ ...cellInput, width: 50, textAlign: "right", color: (it.exciseRate || 0) > 0 ? "#dc2626" : "#8a8aa0" }} />
+                          style={{ ...cellInput, width: 45, textAlign: "right", color: (it.exciseRate || 0) > 0 ? "#dc2626" : "#8a8aa0" }} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.nw} onChange={(e) => setField(it.id, "nw", parseFloat(e.target.value) || 0)}

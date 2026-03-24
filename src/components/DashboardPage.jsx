@@ -265,28 +265,31 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
                 shipment={ship}
                 onClick={() => onOpenShipment(ship.id)}
               />
-              {ship.status === "draft" && (
-                <button
-                  onClick={(e) => handleDelete(e, ship.id)}
-                  style={{
-                    position: "absolute",
-                    top: 12,
-                    right: 8,
-                    background: "none",
-                    border: "none",
-                    color: "#8a8aa0",
-                    cursor: "pointer",
-                    padding: 4,
-                    opacity: 0.5,
-                    zIndex: 2,
-                  }}
-                  title="Delete draft"
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
-                >
-                  {Icons.trash({ sz: 12 })}
-                </button>
-              )}
+              <button
+                onClick={(e) => {
+                  if (ship.status === "filed" || ship.status === "declared") {
+                    if (!confirm(`Delete ${ship.hdr?.customer || "this shipment"}? This is a ${ship.status} declaration.`)) return;
+                  }
+                  handleDelete(e, ship.id);
+                }}
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 8,
+                  background: "none",
+                  border: "none",
+                  color: "#8a8aa0",
+                  cursor: "pointer",
+                  padding: 4,
+                  opacity: 0.5,
+                  zIndex: 2,
+                }}
+                title="Delete shipment"
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
+              >
+                {Icons.trash({ sz: 12 })}
+              </button>
             </div>
           ))}
         </div>

@@ -51,3 +51,38 @@ export function Select({ label, value, onChange, options, style: sx }) {
     </div>
   );
 }
+
+export function TextArea({ label, value, onChange, placeholder, rows = 2, style: sx }) {
+  return (
+    <div style={sx}>
+      <label style={styles.label}>{label}</label>
+      <textarea
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        style={{ ...styles.input, resize: "vertical", lineHeight: 1.4 }}
+      />
+    </div>
+  );
+}
+
+export function Checkbox({ label, checked, onChange, style: sx }) {
+  return (
+    <label
+      style={{
+        display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+        fontSize: 12, color: "#1a1a2e", fontWeight: 500,
+        ...sx,
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={!!checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ width: 16, height: 16, accentColor: "#1a2a5e", cursor: "pointer" }}
+      />
+      {label}
+    </label>
+  );
+}

@@ -15,13 +15,38 @@ import {
 } from "../services/ShipmentService";
 
 const INITIAL_HEADER = {
+  // Transport
   blNo: "", vessel: "", voyage: "", pol: "", pod: "",
+  ctr: "", eta: "", origin: "CN",
+  masterBl: "", houseBl: "",
+  // Parties
   shipper: "", consignee: "", taxId: "", broker: "",
+  customer: "", aeoNumber: "", branchCode: "",
+  brokerLicense: "", declarantName: "",
+  // Invoice
   incoterm: "CIF", currency: "USD", fx: 32.61,
-  pkgs: 0, pkgUnit: "CARTON", eta: "",
-  invNo: "", invDate: "", origin: "CN",
-  freight: 0, insurance: 0, priv: "NONE", permit: "", ctr: "",
-  customer: "",
+  pkgs: 0, pkgUnit: "CARTON",
+  invNo: "", invDate: "",
+  freight: 0, insurance: 0,
+  // Privilege
+  priv: "NONE", permit: "",
+  taxIncentiveRef: "",
+  // Customs office & manifest
+  customsOffice: "", manifestNo: "",
+  warehouseCode: "", releasePort: "",
+  marksNumbers: "",
+  // Payment
+  paymentMethod: "CASH",
+  // Certificate of Origin
+  coForm: "", coNumber: "", coDate: "", coExpiry: "",
+  originCriteria: "", thirdPartyInvoice: false,
+  // Valuation adjustments (WTO Article 8)
+  royalties: 0, assists: 0, sellingCommission: 0,
+  // Bond/Guarantee
+  bondType: "", bondNumber: "", bondAmount: 0,
+  bondProvider: "", bondExpiry: "",
+  // BOI specific
+  boiCertNo: "", boiSection: "",
 };
 
 const INITIAL_DOCS = {

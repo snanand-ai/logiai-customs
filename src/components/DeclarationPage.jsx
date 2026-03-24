@@ -3,7 +3,7 @@ import PrivilegeInsight from "./intelligence/PrivilegeInsight";
 import { s } from "../constants/styles";
 import { fmt, fmtThb } from "../utils/format";
 import { calculateDeclaration } from "../utils/calculations";
-import { DECLARATION_TYPES } from "../constants/privileges";
+import { DECLARATION_TYPES, CO_FORMS } from "../constants/privileges";
 import * as XLSX from "xlsx";
 
 const thStyle = {
@@ -75,13 +75,56 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
       ["Freight (" + (hdr.currency || "USD") + ")", parseFloat(hdr.freight) || 0],
       ["Insurance (" + (hdr.currency || "USD") + ")", parseFloat(hdr.insurance) || 0],
       [],
+      ["CUSTOMS OFFICE"],
+      ["Customs Office", hdr.customsOffice || ""],
+      ["Manifest Number", hdr.manifestNo || ""],
+      ["Master B/L", hdr.masterBl || ""],
+      ["Warehouse Code", hdr.warehouseCode || ""],
+      ["Release Port", hdr.releasePort || ""],
+      ["Payment Method", hdr.paymentMethod || ""],
+      ["Declarant", hdr.declarantName || ""],
+      [],
       ["PRIVILEGE"],
       ["Tax Privilege", privilege.label],
       ["Permit / License", hdr.permit || "N/A"],
+      ...(hdr.coNumber ? [
+        [],
+        ["CERTIFICATE OF ORIGIN"],
+        ["CO Form", hdr.coForm || ""],
+        ["CO Number", hdr.coNumber || ""],
+        ["Origin Criteria", hdr.originCriteria || ""],
+        ["CO Issue Date", hdr.coDate || ""],
+        ["CO Expiry Date", hdr.coExpiry || ""],
+        ["Third-party Invoice", hdr.thirdPartyInvoice ? "Yes" : "No"],
+      ] : []),
+      ...(hdr.boiCertNo ? [
+        [],
+        ["BOI DETAILS"],
+        ["BOI Certificate", hdr.boiCertNo || ""],
+        ["BOI Section", hdr.boiSection || ""],
+      ] : []),
+      ...((parseFloat(hdr.royalties) > 0 || parseFloat(hdr.assists) > 0) ? [
+        [],
+        ["VALUATION ADJUSTMENTS"],
+        ["Royalties (" + (hdr.currency || "USD") + ")", parseFloat(hdr.royalties) || 0],
+        ["Assists (" + (hdr.currency || "USD") + ")", parseFloat(hdr.assists) || 0],
+        ["Selling Commission (" + (hdr.currency || "USD") + ")", parseFloat(hdr.sellingCommission) || 0],
+      ] : []),
+      ...(hdr.bondType ? [
+        [],
+        ["BOND / GUARANTEE"],
+        ["Bond Type", hdr.bondType || ""],
+        ["Bond Number", hdr.bondNumber || ""],
+        ["Bond Amount (THB)", parseFloat(hdr.bondAmount) || 0],
+        ["Bond Provider", hdr.bondProvider || ""],
+        ["Bond Expiry", hdr.bondExpiry || ""],
+      ] : []),
       [],
       ["TAX SUMMARY"],
       [`Total ${valuationLabel} (THB)`, totals.cif],
       [isExport ? "Export Duty อากรขาออก (THB)" : "Import Duty อากรขาเข้า (THB)", totals.duty],
+      ["Anti-dumping Duty อากรตอบโต้ทุ่มตลาด (THB)", totals.ad],
+      ["Countervailing Duty อากรตอบโต้อุดหนุน (THB)", totals.cvd],
       ["Excise Tax ภาษีสรรพสามิต (THB)", totals.excise],
       ["Interior Tax ภาษีเพื่อมหาดไทย (THB)", totals.interior],
       ["VAT ภาษีมูลค่าเพิ่ม (THB)", totals.vat],
@@ -100,20 +143,26 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
     XLSX.utils.book_append_sheet(wb, wsHeader, "Declaration");
 
     const itemHeaders = [
-      "#", "Part Number", "Description", "Thai Description", "HS Code",
-      "Origin", "Qty", "Unit Price (" + (hdr.currency || "USD") + ")",
+      "#", "Part Number", "Description", "Thai Description", "HS Code", "Stat Suffix",
+      "Origin", "Qty", "Unit", "Unit Price (" + (hdr.currency || "USD") + ")",
       "Amount (" + (hdr.currency || "USD") + ")", "NW (kg)", "GW (kg)",
-      "Freight Alloc", "Insurance Alloc", "CIF (" + (hdr.currency || "USD") + ")",
+      "Freight Alloc", "Insurance Alloc", "Adjust Alloc",
+      "CIF (" + (hdr.currency || "USD") + ")",
       "CIF (THB)", "Duty Rate %", "Applied Rate %", "Duty (THB)",
+      "AD Rate %", "AD (THB)", "CVD Rate %", "CVD (THB)",
+      "Excise %", "Excise (THB)", "Interior (THB)",
       "VAT (THB)", "Total Tax (THB)", "PO Number",
     ];
 
     const itemRows = details.map((it) => [
-      it.lineNo, it.pn, it.desc, it.th || "", it.hs || "",
-      it.org || hdr.origin || "", it.qty, it.up,
+      it.lineNo, it.pn, it.desc, it.th || "", it.hs || "", it.statSuffix || "",
+      it.org || hdr.origin || "", it.qty, it.qtyUnit || "PCE", it.up,
       it.amount, it.nw || 0, it.gw || 0,
-      it.freightAlloc, it.insuranceAlloc, it.cifInCurrency,
+      it.freightAlloc, it.insuranceAlloc, it.adjustAlloc || 0,
+      it.cifInCurrency,
       it.cifTHB, it.normalDutyRate, it.appliedDutyRate, it.dutyAmount,
+      it.adRate || 0, it.adAmount || 0, it.cvdRate || 0, it.cvdAmount || 0,
+      it.exciseRate || 0, it.exciseAmount || 0, it.interiorAmount || 0,
       it.vatAmount, it.totalTax, it.po || "",
     ]);
 
@@ -170,11 +219,13 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: totals.excise > 0 ? "repeat(7,1fr)" : "repeat(5,1fr)", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(120px, 1fr))`, gap: 10, marginBottom: 16 }}>
         {[
           ["Items", items.length, "#1a2a5e"],
           [valuationLabel, fmtThb(totals.cif), "#2563eb"],
           ["Duty", fmtThb(totals.duty), totals.duty > 0 ? "#dc2626" : "#15803d"],
+          ...(totals.ad > 0 ? [["AD", fmtThb(totals.ad), "#dc2626"]] : []),
+          ...(totals.cvd > 0 ? [["CVD", fmtThb(totals.cvd), "#dc2626"]] : []),
           ...(totals.excise > 0 ? [
             ["Excise", fmtThb(totals.excise), "#dc2626"],
             ["Interior", fmtThb(totals.interior), "#dc2626"],
@@ -226,7 +277,7 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr>
-                {["#", "Part", "HS", "Desc", "Thai", "Origin", "Qty", "NW", "GW", `Amt(${hdr.currency})`, `${valuationLabel}(THB)`, "Duty%", "Duty", "Excise", "Interior", "VAT", "Tax"].map((h, i) => (
+                {["#", "Part", "HS", "Desc", "Thai", "Origin", "Qty", "NW", "GW", `Amt(${hdr.currency})`, `${valuationLabel}(THB)`, "Duty%", "Duty", "AD", "CVD", "Excise", "Interior", "VAT", "Tax"].map((h, i) => (
                   <th key={i} style={{ ...thStyle, textAlign: i >= 6 ? "right" : "left" }}>{h}</th>
                 ))}
               </tr>
@@ -253,6 +304,8 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
                   <td style={{ padding: "5px 6px", textAlign: "right", fontWeight: 600 }}>{fmt(it.cifTHB, 0)}</td>
                   <td style={{ padding: "5px 6px", textAlign: "right", color: it.appliedDutyRate > 0 ? "#dc2626" : "#15803d", fontWeight: 600 }}>{it.appliedDutyRate}%</td>
                   <td style={{ padding: "5px 6px", textAlign: "right", color: it.dutyAmount > 0 ? "#dc2626" : "#15803d" }}>{fmt(it.dutyAmount, 0)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", color: it.adAmount > 0 ? "#dc2626" : "#8a8aa0" }}>{fmt(it.adAmount, 0)}</td>
+                  <td style={{ padding: "5px 6px", textAlign: "right", color: it.cvdAmount > 0 ? "#dc2626" : "#8a8aa0" }}>{fmt(it.cvdAmount, 0)}</td>
                   <td style={{ padding: "5px 6px", textAlign: "right", color: it.exciseAmount > 0 ? "#dc2626" : "#8a8aa0" }}>{fmt(it.exciseAmount, 0)}</td>
                   <td style={{ padding: "5px 6px", textAlign: "right", color: it.interiorAmount > 0 ? "#dc2626" : "#8a8aa0" }}>{fmt(it.interiorAmount, 0)}</td>
                   <td style={{ padding: "5px 6px", textAlign: "right" }}>{fmt(it.vatAmount, 0)}</td>
@@ -270,6 +323,8 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700, color: "#2563eb" }}>{fmt(totals.cif, 0)}</td>
                 <td></td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.duty, 0)}</td>
+                <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.ad, 0)}</td>
+                <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.cvd, 0)}</td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.excise, 0)}</td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.interior, 0)}</td>
                 <td style={{ padding: "8px 6px", textAlign: "right", fontWeight: 700 }}>{fmt(totals.vat, 0)}</td>
@@ -341,6 +396,23 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
               <FV label="Gross Weight น.น.รวม (kg)" value={fmt(totalGW, 2)} />
             </div>
 
+            {/* Customs Office & Manifest */}
+            {(hdr.customsOffice || hdr.manifestNo) && (
+              <>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#c6952e", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid #e8e7ed", paddingBottom: 3 }}>
+                  Customs Office & Manifest ด่านศุลกากร
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                  <FV label="Customs Office ด่านศุลกากร" value={hdr.customsOffice} />
+                  <FV label="Manifest No เลขที่รายงาน" value={hdr.manifestNo} />
+                  <FV label="Warehouse โรงพักสินค้า" value={hdr.warehouseCode} />
+                  {hdr.masterBl && <FV label="Master B/L" value={hdr.masterBl} />}
+                  {hdr.releasePort && <FV label="Release Port ท่าตรวจปล่อย" value={hdr.releasePort} />}
+                  <FV label="Payment Method วิธีชำระ" value={hdr.paymentMethod} />
+                </div>
+              </>
+            )}
+
             {privilege.code !== "NONE" && (
               <>
                 <div style={{ fontSize: 9, fontWeight: 700, color: "#c6952e", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid #e8e7ed", paddingBottom: 3 }}>
@@ -349,6 +421,64 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
                   <FV label="Privilege Type ประเภทสิทธิ" value={privilege.label} />
                   <FV label="Permit / License เลขที่อนุญาต" value={hdr.permit || "—"} />
+                </div>
+              </>
+            )}
+
+            {/* Certificate of Origin */}
+            {hdr.coNumber && (
+              <>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#c6952e", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid #e8e7ed", paddingBottom: 3 }}>
+                  Certificate of Origin ใบรับรองถิ่นกำเนิด
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                  <FV label="CO Form" value={hdr.coForm} />
+                  <FV label="CO Number เลขที่" value={hdr.coNumber} />
+                  <FV label="Origin Criteria เกณฑ์" value={hdr.originCriteria} />
+                  <FV label="Issue Date วันที่ออก" value={hdr.coDate} />
+                  <FV label="Expiry Date วันหมดอายุ" value={hdr.coExpiry} />
+                  {hdr.thirdPartyInvoice && <FV label="Third-party Invoice" value="Yes" />}
+                </div>
+              </>
+            )}
+
+            {/* BOI Details */}
+            {hdr.boiCertNo && (
+              <>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#c6952e", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid #e8e7ed", paddingBottom: 3 }}>
+                  BOI Promotion ส่งเสริมการลงทุน
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                  <FV label="BOI Certificate เลขบัตรส่งเสริม" value={hdr.boiCertNo} />
+                  <FV label="BOI Section มาตรา" value={hdr.boiSection ? `§${hdr.boiSection}` : "—"} />
+                </div>
+              </>
+            )}
+
+            {/* Valuation Adjustments */}
+            {(parseFloat(hdr.royalties) > 0 || parseFloat(hdr.assists) > 0 || parseFloat(hdr.sellingCommission) > 0) && (
+              <>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#c6952e", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid #e8e7ed", paddingBottom: 3 }}>
+                  Valuation Adjustments การปรับราคา
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                  {parseFloat(hdr.royalties) > 0 && <FV label="Royalties ค่าสิทธิ" value={`${hdr.currency} ${fmt(parseFloat(hdr.royalties))}`} />}
+                  {parseFloat(hdr.assists) > 0 && <FV label="Assists ค่าช่วยเหลือ" value={`${hdr.currency} ${fmt(parseFloat(hdr.assists))}`} />}
+                  {parseFloat(hdr.sellingCommission) > 0 && <FV label="Commission ค่านายหน้า" value={`${hdr.currency} ${fmt(parseFloat(hdr.sellingCommission))}`} />}
+                </div>
+              </>
+            )}
+
+            {/* Bond/Guarantee */}
+            {hdr.bondType && (
+              <>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#c6952e", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em", borderBottom: "1px solid #e8e7ed", paddingBottom: 3 }}>
+                  Bond / Guarantee ค้ำประกัน
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                  <FV label="Bond Type ประเภท" value={hdr.bondType} />
+                  <FV label="Bond Number เลขที่" value={hdr.bondNumber} />
+                  <FV label="Bond Amount จำนวน (THB)" value={hdr.bondAmount ? fmtThb(parseFloat(hdr.bondAmount)) : "—"} />
                 </div>
               </>
             )}
@@ -362,6 +492,8 @@ export default function DeclarationPage({ items, hdr, setPg, shipmentId, recordF
               </div>
               {[
                 [isExport ? "อากรขาออก Export Duty" : "อากรขาเข้า Import Duty", fmtThb(totals.duty)],
+                ...(totals.ad > 0 ? [["อากรตอบโต้ทุ่มตลาด AD", fmtThb(totals.ad)]] : []),
+                ...(totals.cvd > 0 ? [["อากรตอบโต้อุดหนุน CVD", fmtThb(totals.cvd)]] : []),
                 ["ภาษีสรรพสามิต Excise", fmtThb(totals.excise)],
                 ["ภาษีเพื่อมหาดไทย Interior", fmtThb(totals.interior)],
                 ["ภาษีมูลค่าเพิ่ม VAT 7%", fmtThb(totals.vat)],
