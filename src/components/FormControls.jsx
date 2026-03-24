@@ -1,23 +1,24 @@
 const styles = {
   input: {
-    background: "rgba(0,0,0,0.25)",
-    border: "1px solid rgba(255,255,255,0.1)",
+    background: "#ffffff",
+    border: "1px solid #d4d2e0",
     borderRadius: 6,
-    color: "#e2e8f0",
+    color: "#1a1a2e",
     padding: "8px 12px",
     fontSize: 13,
     width: "100%",
     outline: "none",
     boxSizing: "border-box",
+    fontFamily: "'Sarabun', sans-serif",
   },
   label: {
     fontSize: 10,
-    color: "#64748b",
+    color: "#8B6914",
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     marginBottom: 4,
     display: "block",
-    fontWeight: 600,
+    fontWeight: 700,
   },
 };
 

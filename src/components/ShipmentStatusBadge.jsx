@@ -3,11 +3,11 @@
  */
 
 const STATUS_CONFIG = {
-  draft: { label: "Draft", color: "#94a3b8", bg: "rgba(148,163,184,0.1)" },
-  documentsUploaded: { label: "Docs Uploaded", color: "#60a5fa", bg: "rgba(96,165,250,0.1)" },
-  itemsReviewed: { label: "Items Reviewed", color: "#fbbf24", bg: "rgba(251,191,36,0.1)" },
-  declared: { label: "Declared", color: "#34d399", bg: "rgba(52,211,153,0.1)" },
-  filed: { label: "Filed", color: "#6ee7b7", bg: "rgba(110,231,183,0.12)" },
+  draft: { label: "Draft", color: "#5a5a7a", bg: "#f0eff5" },
+  documentsUploaded: { label: "Docs Uploaded", color: "#2563eb", bg: "#eff6ff" },
+  itemsReviewed: { label: "Items Reviewed", color: "#b45309", bg: "#fffbeb" },
+  declared: { label: "Declared", color: "#1a2a5e", bg: "#eef2ff" },
+  filed: { label: "Filed", color: "#15803d", bg: "#f0fdf4" },
 };
 
 export default function ShipmentStatusBadge({ status, size = "sm" }) {
@@ -24,7 +24,7 @@ export default function ShipmentStatusBadge({ status, size = "sm" }) {
         fontWeight: 700,
         color: config.color,
         background: config.bg,
-        border: `1px solid ${config.color}22`,
+        border: `1px solid ${config.color}30`,
         borderRadius: 10,
         padding: isLg ? "4px 12px" : "2px 8px",
         textTransform: "uppercase",

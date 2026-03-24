@@ -9,20 +9,17 @@ import HsLookupPanel from "./HsLookupPanel";
 const HS_HISTORY_KEY = "logiai_hs_history";
 
 const cellInput = {
-  background: "rgba(0,0,0,0.25)",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: 6,
-  color: "#e2e8f0",
+  background: "#ffffff",
+  border: "1px solid #d4d2e0",
+  borderRadius: 4,
+  color: "#1a1a2e",
   padding: "4px 7px",
   fontSize: 11,
   outline: "none",
   boxSizing: "border-box",
+  fontFamily: "'Sarabun', sans-serif",
 };
 
-/**
- * Load HS code history from localStorage.
- * Format: { "partNo": { hs, th, duty, org, customer, date } }
- */
 function loadHsHistory() {
   try {
     return JSON.parse(localStorage.getItem(HS_HISTORY_KEY) || "{}");
@@ -31,9 +28,6 @@ function loadHsHistory() {
   }
 }
 
-/**
- * Save current items' HS mappings to history for future auto-suggest.
- */
 function saveHsHistory(items, customer) {
   const history = loadHsHistory();
   const now = new Date().toISOString().split("T")[0];
@@ -63,24 +57,20 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
   const [hsHistory] = useState(() => loadHsHistory());
   const historyCount = Object.keys(hsHistory).length;
 
-  // Tariff lookup panel state
   const [showLookup, setShowLookup] = useState(false);
   const [tariffReady, setTariffReady] = useState(isTariffLoaded());
-  const [applyTarget, setApplyTarget] = useState(null); // item id to apply lookup result to
+  const [applyTarget, setApplyTarget] = useState(null);
 
-  // Preload tariff data on mount
   useEffect(() => {
     if (!isTariffLoaded()) {
       loadTariff().then(() => setTariffReady(true));
     }
   }, []);
 
-  // Auto-match from history when no master data
   const matchFromHistory = () => {
     let matched = 0, unmatched = 0;
     setItems((prev) =>
       prev.map((item) => {
-        // Try master data first, then history
         const fromMd = md[item.pn];
         const fromHist = hsHistory[item.pn];
         const data = fromMd || fromHist;
@@ -102,17 +92,14 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
     return { matched, unmatched };
   };
 
-  // Combined match: master data + history
   const handleAutoMatch = () => {
     if (mdArr.length > 0) {
       autoMatch();
     } else {
       const { matched, unmatched } = matchFromHistory();
-      // Toast is handled by parent — we'll just log
     }
   };
 
-  // Save to history when navigating to declaration
   const handleToDeclare = () => {
     saveHsHistory(items, hdr.customer || hdr.consignee || "");
     if (onStatusAdvance) onStatusAdvance();
@@ -125,14 +112,12 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
   const setField = (id, key, value) =>
     setItems((p) => p.map((i) => (i.id === id ? { ...i, [key]: value } : i)));
 
-  // HS code change handler with auto-lookup from tariff DB
   const handleHsChange = (id, value) => {
     setField(id, "hs", value);
     const clean = value.replace(/[\s.\-]/g, "");
     if (clean.length >= 8 && tariffReady) {
       const match = lookupHS(clean);
       if (match && !match.partial) {
-        // Auto-fill duty and Thai description from tariff database
         setItems((p) => p.map((i) =>
           i.id === id
             ? { ...i, hs: value, duty: match.duty, th: match.th || i.th, ok: true }
@@ -142,7 +127,6 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
     }
   };
 
-  // Apply tariff lookup result to a target item (or first item missing HS)
   const handleLookupApply = (entry) => {
     const targetId = applyTarget || items.find((i) => i.pn && !i.hs)?.id || items[0]?.id;
     if (!targetId) return;
@@ -177,12 +161,11 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
   };
 
   const thStyle = {
-    padding: "9px 6px", textAlign: "left", color: "#64748b", fontWeight: 600,
-    fontSize: 10, textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.06)",
-    position: "sticky", top: 0, background: "rgba(15,23,42,0.98)", zIndex: 2, whiteSpace: "nowrap",
+    padding: "9px 6px", textAlign: "left", color: "#ffffff", fontWeight: 600,
+    fontSize: 10, textTransform: "uppercase", borderBottom: "1px solid #1a2a5e",
+    position: "sticky", top: 0, background: "#1a2a5e", zIndex: 2, whiteSpace: "nowrap",
   };
 
-  // Determine data source info
   const hasmaster = mdArr.length > 0;
   const hasHistory = historyCount > 0;
   const tariffCount = tariffReady ? getTariffCount() : 0;
@@ -196,39 +179,36 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
     <div style={{ animation: "fadeIn .3s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Line Items ({items.length})</h2>
-          <p style={{ fontSize: 12, color: "#64748b", margin: "3px 0 0" }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "#1a2a5e" }}>Line Items ({items.length})</h2>
+          <p style={{ fontSize: 12, color: "#5a5a7a", margin: "3px 0 0" }}>
             {ciFile?.st === "done" ? `From ${ciFile.name}` : "Upload CI, paste from Excel, or add manually"}
             {" · "}
-            <span style={{ color: hasmaster ? "#a78bfa" : hasHistory ? "#60a5fa" : "#f59e0b" }}>{dataSourceLabel}</span>
+            <span style={{ color: hasmaster ? "#7c3aed" : hasHistory ? "#2563eb" : "#b45309" }}>{dataSourceLabel}</span>
             {tariffReady && (
-              <span style={{ color: "#475569" }}> · {Icons.book({ sz: 10, c: "#475569" })} {tariffCount.toLocaleString()} tariff codes</span>
+              <span style={{ color: "#8a8aa0" }}> · {Icons.book({ sz: 10, c: "#8a8aa0" })} {tariffCount.toLocaleString()} tariff codes</span>
             )}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          {/* Tariff Lookup toggle */}
           <button
             onClick={() => setShowLookup(!showLookup)}
             style={{
               ...s.btnGhost,
-              color: showLookup ? "#fbbf24" : "#f59e0b",
-              borderColor: showLookup ? "rgba(251,191,36,0.3)" : "rgba(245,158,11,0.2)",
-              background: showLookup ? "rgba(251,191,36,0.1)" : undefined,
+              color: showLookup ? "#c6952e" : "#8B6914",
+              borderColor: showLookup ? "#c6952e" : "#d4d2e0",
+              background: showLookup ? "#faf8f3" : undefined,
               fontSize: 11,
               fontWeight: 600,
               padding: "6px 12px",
             }}
           >
             {Icons.book({ sz: 14 })} Tariff Lookup
-            {!tariffReady && <span style={{ fontSize: 9, marginLeft: 4 }}>⏳</span>}
           </button>
-          {/* Auto-match button — works with master OR history */}
           {(hasmaster || hasHistory) && items.length > 0 && (
-            <button onClick={handleAutoMatch} style={{ ...s.btnGhost, color: "#60a5fa", borderColor: "rgba(96,165,250,0.2)" }}>
+            <button onClick={handleAutoMatch} style={{ ...s.btnGhost, color: "#2563eb", borderColor: "#bfdbfe" }}>
               {Icons.search({ sz: 14 })} Auto-Match
               {missingHs > 0 && (
-                <span style={{ fontSize: 10, background: "rgba(239,68,68,0.15)", color: "#f87171", padding: "1px 6px", borderRadius: 10 }}>
+                <span style={{ fontSize: 10, background: "#fef2f2", color: "#dc2626", padding: "1px 6px", borderRadius: 10, border: "1px solid #fecaca" }}>
                   {missingHs}
                 </span>
               )}
@@ -238,7 +218,6 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
         </div>
       </div>
 
-      {/* Tariff Lookup Panel */}
       {showLookup && (
         <HsLookupPanel
           onApply={handleLookupApply}
@@ -246,16 +225,15 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
         />
       )}
 
-      {/* HS Code source status banner */}
       {items.length > 0 && !hasmaster && !showLookup && (
         <div style={{
           marginBottom: 12, padding: "10px 16px", borderRadius: 8, fontSize: 12,
-          background: hasHistory ? "rgba(96,165,250,0.05)" : "rgba(245,158,11,0.06)",
-          border: `1px solid ${hasHistory ? "rgba(96,165,250,0.15)" : "rgba(245,158,11,0.15)"}`,
-          color: hasHistory ? "#60a5fa" : "#f59e0b",
+          background: hasHistory ? "#eff6ff" : "#fffbeb",
+          border: `1px solid ${hasHistory ? "#bfdbfe" : "#fde68a"}`,
+          color: hasHistory ? "#2563eb" : "#b45309",
           display: "flex", alignItems: "center", gap: 10,
         }}>
-          {hasHistory ? Icons.db({ sz: 14, c: "#60a5fa" }) : Icons.alert({ sz: 14, c: "#f59e0b" })}
+          {hasHistory ? Icons.db({ sz: 14, c: "#2563eb" }) : Icons.alert({ sz: 14, c: "#b45309" })}
           <span>
             {hasHistory
               ? `No master data uploaded. Using ${historyCount} HS codes from previous declarations. Click Auto-Match to apply.`
@@ -266,15 +244,15 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
       )}
 
       {items.length === 0 ? (
-        <div onPaste={handlePaste} tabIndex={0} style={{ ...s.card, textAlign: "center", padding: "50px 24px", border: "2px dashed rgba(52,211,153,0.2)", cursor: "text" }}>
-          <div style={{ color: "#34d399", marginBottom: 10 }}>{Icons.upload({ sz: 32 })}</div>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>No items yet</div>
-          <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
+        <div onPaste={handlePaste} tabIndex={0} style={{ ...s.card, textAlign: "center", padding: "50px 24px", border: "2px dashed #c6952e", cursor: "text" }}>
+          <div style={{ color: "#c6952e", marginBottom: 10 }}>{Icons.upload({ sz: 32 })}</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#1a2a5e" }}>No items yet</div>
+          <div style={{ fontSize: 12, color: "#5a5a7a", marginTop: 6 }}>
             Go to <b>Upload</b> to import from Excel, or paste tab-separated data here
           </div>
         </div>
       ) : (
-        <div style={{ ...s.card, padding: 0, overflow: "hidden" }} onPaste={handlePaste} tabIndex={0}>
+        <div style={{ ...s.card, padding: 0, overflow: "hidden", borderTop: "3px solid #1a2a5e" }} onPaste={handlePaste} tabIndex={0}>
           <div style={{ overflowX: "auto", maxHeight: 480 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
               <thead>
@@ -286,19 +264,17 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
               </thead>
               <tbody>
                 {items.map((it, idx) => {
-                  // Show hint if history has a match but item doesn't have HS
                   const histHint = !it.hs && hsHistory[it.pn] ? hsHistory[it.pn].hs : null;
-                  // Tariff validation indicator
                   const tariffMatch = it.hs && it.hs.replace(/[\s.\-]/g, "").length >= 8 && tariffReady
                     ? lookupHS(it.hs.replace(/[\s.\-]/g, ""))
                     : null;
 
                   return (
-                    <tr key={it.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                      <td style={{ padding: "5px 6px", color: "#475569", fontSize: 10 }}>{idx + 1}</td>
+                    <tr key={it.id} style={{ borderBottom: "1px solid #e8e7ed", background: idx % 2 === 0 ? "#ffffff" : "#fafafe" }}>
+                      <td style={{ padding: "5px 6px", color: "#8a8aa0", fontSize: 10 }}>{idx + 1}</td>
                       <td style={{ padding: 3 }}>
                         <input value={it.pn} onChange={(e) => setField(it.id, "pn", e.target.value)}
-                          style={{ ...cellInput, width: 105, fontFamily: "monospace", color: it.ok ? "#34d399" : "#e2e8f0" }} />
+                          style={{ ...cellInput, width: 105, fontFamily: "monospace", color: it.ok ? "#15803d" : "#1a1a2e" }} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input value={it.desc} onChange={(e) => setField(it.id, "desc", e.target.value)} style={{ ...cellInput, width: 160 }} />
@@ -309,33 +285,30 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
                             placeholder={histHint || ""}
                             style={{
                               ...cellInput, width: 85, fontFamily: "monospace",
-                              color: it.hs ? "#fbbf24" : "#64748b",
-                              borderColor: !it.hs && it.pn ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.1)",
+                              color: it.hs ? "#c6952e" : "#8a8aa0",
+                              borderColor: !it.hs && it.pn ? "#fecaca" : "#d4d2e0",
                             }} />
-                          {/* Validation indicator */}
                           {it.hs && it.hs.replace(/[\s.\-]/g, "").length >= 8 && tariffReady && (
                             <span title={tariffMatch ? `${tariffMatch.en} — ${tariffMatch.duty}%` : "HS code not found in tariff database"}>
                               {tariffMatch
-                                ? Icons.check({ sz: 11, c: "#34d399" })
-                                : Icons.alert({ sz: 11, c: "#f59e0b" })
+                                ? Icons.check({ sz: 11, c: "#15803d" })
+                                : Icons.alert({ sz: 11, c: "#b45309" })
                               }
                             </span>
                           )}
-                          {/* Tariff search shortcut for this row */}
                           {!it.hs && it.pn && (
                             <button
                               onClick={() => { setApplyTarget(it.id); setShowLookup(true); }}
                               title="Search tariff for this item"
                               style={{
                                 background: "none", border: "none",
-                                color: "#64748b", cursor: "pointer", padding: 1,
+                                color: "#8a8aa0", cursor: "pointer", padding: 1,
                               }}
                             >
                               {Icons.search({ sz: 10 })}
                             </button>
                           )}
                         </div>
-                        {/* HS intelligence insight */}
                         {hsInsight && it.hs && it.hs.replace(/[\s.\-]/g, "").length >= 4 && (
                           <HsInsight hsCode={it.hs} getInsight={hsInsight} />
                         )}
@@ -351,8 +324,8 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
                             title={`Apply ${histHint} from history`}
                             style={{
                               position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)",
-                              background: "rgba(96,165,250,0.15)", border: "none", borderRadius: 3,
-                              color: "#60a5fa", cursor: "pointer", fontSize: 9, padding: "1px 4px", fontWeight: 700,
+                              background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 3,
+                              color: "#2563eb", cursor: "pointer", fontSize: 9, padding: "1px 4px", fontWeight: 700,
                             }}
                           >
                             ↩
@@ -360,11 +333,11 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
                         )}
                       </td>
                       <td style={{ padding: 3 }}>
-                        <input value={it.th} onChange={(e) => setField(it.id, "th", e.target.value)} style={{ ...cellInput, width: 120, color: "#a78bfa" }} />
+                        <input value={it.th} onChange={(e) => setField(it.id, "th", e.target.value)} style={{ ...cellInput, width: 120, color: "#7c3aed" }} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input value={it.org || hdr.origin || ""} onChange={(e) => setField(it.id, "org", e.target.value)}
-                          style={{ ...cellInput, width: 36, textAlign: "center", textTransform: "uppercase", fontSize: 10, color: "#94a3b8" }} maxLength={2} />
+                          style={{ ...cellInput, width: 36, textAlign: "center", textTransform: "uppercase", fontSize: 10, color: "#5a5a7a" }} maxLength={2} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.qty} onChange={(e) => setField(it.id, "qty", parseFloat(e.target.value) || 0)}
@@ -376,11 +349,11 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.duty} onChange={(e) => setField(it.id, "duty", parseFloat(e.target.value) || 0)}
-                          style={{ ...cellInput, width: 50, textAlign: "right", color: it.duty > 0 ? "#fbbf24" : "#34d399" }} />
+                          style={{ ...cellInput, width: 50, textAlign: "right", color: it.duty > 0 ? "#c6952e" : "#15803d" }} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.exciseRate || 0} onChange={(e) => setField(it.id, "exciseRate", parseFloat(e.target.value) || 0)}
-                          style={{ ...cellInput, width: 50, textAlign: "right", color: (it.exciseRate || 0) > 0 ? "#f87171" : "#64748b" }} />
+                          style={{ ...cellInput, width: 50, textAlign: "right", color: (it.exciseRate || 0) > 0 ? "#dc2626" : "#8a8aa0" }} />
                       </td>
                       <td style={{ padding: 3 }}>
                         <input type="number" value={it.nw} onChange={(e) => setField(it.id, "nw", parseFloat(e.target.value) || 0)}
@@ -394,10 +367,10 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
                         <input value={it.po} onChange={(e) => setField(it.id, "po", e.target.value)} style={{ ...cellInput, width: 80, fontFamily: "monospace" }} />
                       </td>
                       <td style={{ padding: 3, whiteSpace: "nowrap" }}>
-                        <button onClick={() => duplicateItem(it.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 2 }}>
+                        <button onClick={() => duplicateItem(it.id)} style={{ background: "none", border: "none", color: "#8a8aa0", cursor: "pointer", padding: 2 }}>
                           {Icons.copy({ sz: 12 })}
                         </button>
-                        <button onClick={() => deleteItem(it.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", padding: 2 }}>
+                        <button onClick={() => deleteItem(it.id)} style={{ background: "none", border: "none", color: "#8a8aa0", cursor: "pointer", padding: 2 }}>
                           {Icons.trash({ sz: 12 })}
                         </button>
                       </td>
@@ -407,13 +380,13 @@ export default function ItemsPage({ items, setItems, md, hdr, autoMatch, ciFile,
               </tbody>
             </table>
           </div>
-          <div style={{ padding: "10px 14px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 20, fontSize: 12, alignItems: "center" }}>
-            <span style={{ color: "#64748b" }}>Total: <b style={{ color: "#fbbf24" }}>${fmt(totalInv)}</b></span>
+          <div style={{ padding: "10px 14px", borderTop: "1px solid #e8e7ed", display: "flex", gap: 20, fontSize: 12, alignItems: "center", background: "#fafafe" }}>
+            <span style={{ color: "#5a5a7a" }}>Total: <b style={{ color: "#c6952e" }}>${fmt(totalInv)}</b></span>
             {missingHs > 0 && (
-              <span style={{ color: "#f87171" }}>{Icons.alert({ sz: 13, c: "#f87171" })} {missingHs} need HS</span>
+              <span style={{ color: "#dc2626" }}>{Icons.alert({ sz: 13, c: "#dc2626" })} {missingHs} need HS</span>
             )}
             {tariffReady && tariffCount > 0 && (
-              <span style={{ color: "#475569", fontSize: 10 }}>{Icons.book({ sz: 10, c: "#475569" })} Tariff DB active</span>
+              <span style={{ color: "#8a8aa0", fontSize: 10 }}>{Icons.book({ sz: 10, c: "#8a8aa0" })} Tariff DB active</span>
             )}
             <div style={{ flex: 1 }} />
             <button onClick={addItem} style={{ ...s.btnGhost, padding: "4px 10px", fontSize: 11 }}>{Icons.plus({ sz: 12 })} Row</button>

@@ -1,9 +1,5 @@
 /**
  * ShipmentWorkspace — Container for a single shipment
- *
- * Wraps the existing 5 pages (Upload, Shipment, Items, Master, Declaration)
- * with tab navigation and provides them state from useShipment hook.
- * This replaces the linear wizard from App.jsx.
  */
 
 import { useState, useEffect } from "react";
@@ -31,7 +27,6 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
   const intel = useIntelligence();
   const [tab, setTab] = useState("upload");
 
-  // Keyboard shortcut: Escape to go back
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "Escape" && onBack) onBack();
@@ -42,16 +37,14 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
 
   if (ship.loading) {
     return (
-      <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>
+      <div style={{ textAlign: "center", padding: 60, color: "#5a5a7a" }}>
         Loading shipment...
       </div>
     );
   }
 
-  // Helper: navigate to tab (setPg replacement)
   const setPg = (page) => setTab(page);
 
-  // Build the label
   const label =
     ship.hdr.customer ||
     ship.hdr.consignee ||
@@ -84,7 +77,7 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
             style={{
               fontSize: 16,
               fontWeight: 700,
-              color: "#e2e8f0",
+              color: "#1a2a5e",
               display: "flex",
               alignItems: "center",
               gap: 8,
@@ -93,7 +86,7 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
             {label}
             <ShipmentStatusBadge status={ship.status} size="lg" />
           </div>
-          <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: "#8a8aa0", marginTop: 2 }}>
             {ship.items.length} items &middot; ID: {ship.id?.slice(-6)}
           </div>
         </div>
@@ -101,7 +94,7 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
           onClick={() => ship.save()}
           style={{ ...s.btnGhost, padding: "6px 12px", fontSize: 11 }}
         >
-          {Icons.check({ sz: 12, c: "#34d399" })} Save
+          {Icons.check({ sz: 12, c: "#15803d" })} Save
         </button>
       </div>
 
@@ -111,8 +104,8 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
           display: "flex",
           gap: 3,
           marginBottom: 20,
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          paddingBottom: 8,
+          borderBottom: "2px solid #d4d2e0",
+          paddingBottom: 0,
         }}
       >
         {TABS.map((t) => (
@@ -120,24 +113,27 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              ...s.btnGhost,
+              background: tab === t.key ? "#ffffff" : "transparent",
+              border: tab === t.key
+                ? "1px solid #d4d2e0"
+                : "1px solid transparent",
+              borderBottom: tab === t.key
+                ? "3px solid #c6952e"
+                : "3px solid transparent",
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+              borderTopLeftRadius: 6,
+              borderTopRightRadius: 6,
+              color: tab === t.key ? "#1a2a5e" : "#5a5a7a",
               fontWeight: 600,
               fontSize: 11,
-              padding: "6px 12px",
-              background:
-                tab === t.key
-                  ? "rgba(16,185,129,0.12)"
-                  : "rgba(255,255,255,0.02)",
-              color: tab === t.key ? "#34d399" : "#64748b",
-              border: `1px solid ${
-                tab === t.key
-                  ? "rgba(52,211,153,0.25)"
-                  : "rgba(255,255,255,0.04)"
-              }`,
-              borderBottom:
-                tab === t.key
-                  ? "2px solid #34d399"
-                  : "2px solid transparent",
+              padding: "8px 14px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: -2,
+              fontFamily: "'Sarabun', sans-serif",
             }}
           >
             {t.icon({ sz: 13 })} {t.label}
@@ -145,11 +141,12 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
               <span
                 style={{
                   fontSize: 9,
-                  background: "rgba(52,211,153,0.2)",
-                  color: "#34d399",
+                  background: "#eef2ff",
+                  color: "#1a2a5e",
                   padding: "1px 5px",
                   borderRadius: 10,
                   marginLeft: 3,
+                  border: "1px solid #d4d2e0",
                 }}
               >
                 {ship.items.length}
@@ -159,11 +156,12 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
               <span
                 style={{
                   fontSize: 9,
-                  background: "rgba(167,139,250,0.2)",
-                  color: "#a78bfa",
+                  background: "#faf5ff",
+                  color: "#7c3aed",
                   padding: "1px 5px",
                   borderRadius: 10,
                   marginLeft: 3,
+                  border: "1px solid #e9d5ff",
                 }}
               >
                 {Object.keys(ship.md).length}
@@ -183,23 +181,28 @@ export default function ShipmentWorkspace({ shipmentId, onBack }) {
             zIndex: 999,
             background:
               ship.toast.type === "error"
-                ? "#7f1d1d"
+                ? "#fef2f2"
                 : ship.toast.type === "warning"
-                ? "#78350f"
-                : "#064e3b",
+                ? "#fffbeb"
+                : "#f0fdf4",
             border: `1px solid ${
+              ship.toast.type === "error"
+                ? "#fecaca"
+                : ship.toast.type === "warning"
+                ? "#fde68a"
+                : "#bbf7d0"
+            }`,
+            color:
               ship.toast.type === "error"
                 ? "#dc2626"
                 : ship.toast.type === "warning"
-                ? "#f59e0b"
-                : "#10b981"
-            }`,
-            color: "#fff",
+                ? "#b45309"
+                : "#15803d",
             padding: "10px 20px",
-            borderRadius: 10,
+            borderRadius: 8,
             fontSize: 13,
             fontWeight: 600,
-            boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+            boxShadow: "0 4px 20px rgba(26,42,94,0.15)",
             animation: "slideIn .3s ease",
           }}
         >

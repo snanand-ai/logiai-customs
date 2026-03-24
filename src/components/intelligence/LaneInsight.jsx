@@ -1,8 +1,5 @@
 /**
  * LaneInsight — Trade lane statistics widget
- *
- * Shows shipment count, avg duty, and common HS codes for a trade lane.
- * Appears on ShipmentPage near origin/destination fields.
  */
 
 import { useState, useEffect } from "react";
@@ -31,25 +28,25 @@ export default function LaneInsight({ origin, destination, getInsight }) {
         display: "flex",
         alignItems: "center",
         gap: 10,
-        background: "rgba(99,102,241,0.06)",
-        border: "1px solid rgba(99,102,241,0.12)",
+        background: "#eef2ff",
+        border: "1px solid #c7d2fe",
         borderRadius: 8,
         padding: "8px 14px",
         fontSize: 11,
         animation: "fadeIn .2s ease",
       }}
     >
-      {Icons.anchor({ sz: 13, c: "#818cf8" })}
+      {Icons.anchor({ sz: 13, c: "#1a2a5e" })}
       <div style={{ flex: 1 }}>
-        <div style={{ color: "#818cf8", fontWeight: 700, fontSize: 10, marginBottom: 2 }}>
+        <div style={{ color: "#1a2a5e", fontWeight: 700, fontSize: 10, marginBottom: 2 }}>
           {origin?.toUpperCase()} → {(destination || "TH").toUpperCase()} lane
         </div>
-        <div style={{ color: "#94a3b8", fontSize: 10 }}>
-          <strong style={{ color: "#e2e8f0" }}>{data.shipmentsCount}</strong> shipments
+        <div style={{ color: "#5a5a7a", fontSize: 10 }}>
+          <strong style={{ color: "#1a1a2e" }}>{data.shipmentsCount}</strong> shipments
           {data.avgDuty > 0 && (
             <>
               {" "}&middot; avg duty{" "}
-              <strong style={{ color: "#fbbf24" }}>
+              <strong style={{ color: "#c6952e" }}>
                 {data.avgDuty.toLocaleString("en", { maximumFractionDigits: 0 })} THB
               </strong>
             </>
@@ -57,22 +54,17 @@ export default function LaneInsight({ origin, destination, getInsight }) {
         </div>
       </div>
       {data.commonHsCodes?.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 4,
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {data.commonHsCodes.slice(0, 3).map((hs) => (
             <span
               key={hs.code}
               style={{
                 fontSize: 8,
-                background: "rgba(255,255,255,0.04)",
+                background: "#ffffff",
+                border: "1px solid #d4d2e0",
                 borderRadius: 4,
                 padding: "2px 5px",
-                color: "#64748b",
+                color: "#5a5a7a",
                 fontFamily: "monospace",
               }}
             >

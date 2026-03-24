@@ -1,8 +1,5 @@
 /**
  * DashboardPage — Pipeline view of all shipments
- *
- * New landing page. Shows all shipments grouped by status,
- * with a "New Shipment" button and quick stats.
  */
 
 import { useState, useEffect } from "react";
@@ -26,7 +23,7 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savings, setSavings] = useState(null);
-  const [view, setView] = useState("all"); // "all" | status filter
+  const [view, setView] = useState("all");
 
   useEffect(() => {
     loadData();
@@ -53,7 +50,6 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
     setShipments((prev) => prev.filter((s) => s.id !== id));
   };
 
-  // Group shipments by status
   const grouped = {};
   for (const status of SHIPMENT_STATUSES) {
     grouped[status] = [];
@@ -87,7 +83,7 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
             style={{
               fontSize: 22,
               fontWeight: 700,
-              color: "#e2e8f0",
+              color: "#1a2a5e",
               margin: 0,
             }}
           >
@@ -96,7 +92,7 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
           <p
             style={{
               fontSize: 12,
-              color: "#64748b",
+              color: "#5a5a7a",
               margin: "4px 0 0",
             }}
           >
@@ -122,26 +118,29 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
             key={status}
             onClick={() => setView(view === status ? "all" : status)}
             style={{
-              ...s.card,
+              background: view === status ? "#eef2ff" : "#ffffff",
+              border: view === status
+                ? "1px solid #1a2a5e"
+                : "1px solid #d4d2e0",
+              borderTop: view === status
+                ? "3px solid #c6952e"
+                : "3px solid #d4d2e0",
+              borderRadius: 8,
               cursor: "pointer",
               padding: "14px 16px",
               textAlign: "left",
-              border:
-                view === status
-                  ? "1px solid rgba(52,211,153,0.3)"
-                  : "1px solid rgba(255,255,255,0.06)",
-              background:
-                view === status
-                  ? "rgba(52,211,153,0.05)"
-                  : "rgba(255,255,255,0.025)",
               transition: "all .15s",
+              boxShadow: view === status
+                ? "0 2px 8px rgba(26,42,94,0.12)"
+                : "0 1px 4px rgba(26,42,94,0.04)",
+              fontFamily: "'Sarabun', sans-serif",
             }}
           >
             <div
               style={{
                 fontSize: 22,
                 fontWeight: 700,
-                color: "#e2e8f0",
+                color: "#1a2a5e",
                 marginBottom: 4,
               }}
             >
@@ -156,26 +155,27 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
       {savings && savings.totalSaved > 0 && (
         <div
           style={{
-            ...s.card,
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderLeft: "4px solid #15803d",
+            borderRadius: 8,
             display: "flex",
             alignItems: "center",
             gap: 12,
             marginBottom: 24,
-            border: "1px solid rgba(52,211,153,0.12)",
-            background: "rgba(52,211,153,0.04)",
             padding: "12px 20px",
           }}
         >
-          {Icons.shield({ sz: 18, c: "#34d399" })}
+          {Icons.shield({ sz: 18, c: "#15803d" })}
           <div>
-            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>
+            <div style={{ fontSize: 11, color: "#5a5a7a", fontWeight: 600 }}>
               Total Privilege Savings
             </div>
             <div
               style={{
                 fontSize: 18,
                 fontWeight: 700,
-                color: "#34d399",
+                color: "#15803d",
                 fontFamily: "monospace",
               }}
             >
@@ -183,7 +183,7 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}{" "}
-              <span style={{ fontSize: 11, color: "#64748b", fontWeight: 400 }}>
+              <span style={{ fontSize: 11, color: "#5a5a7a", fontWeight: 400 }}>
                 THB
               </span>
             </div>
@@ -197,14 +197,14 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
                   key={scheme}
                   style={{
                     fontSize: 9,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    background: "#ffffff",
+                    border: "1px solid #d4d2e0",
                     borderRadius: 6,
                     padding: "3px 8px",
-                    color: "#94a3b8",
+                    color: "#5a5a7a",
                   }}
                 >
-                  <strong style={{ color: "#e2e8f0" }}>{scheme}</strong>{" "}
+                  <strong style={{ color: "#1a2a5e" }}>{scheme}</strong>{" "}
                   {amt.toLocaleString("en", { maximumFractionDigits: 0 })}
                 </span>
               ))}
@@ -218,7 +218,7 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
           style={{
             textAlign: "center",
             padding: 60,
-            color: "#64748b",
+            color: "#5a5a7a",
             fontSize: 13,
           }}
         >
@@ -229,18 +229,18 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
           style={{
             textAlign: "center",
             padding: "60px 20px",
-            color: "#475569",
+            color: "#5a5a7a",
           }}
         >
           <div style={{ marginBottom: 12 }}>
-            {Icons.ship({ sz: 40, c: "#1e293b" })}
+            {Icons.ship({ sz: 40, c: "#d4d2e0" })}
           </div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#64748b", marginBottom: 6 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#1a2a5e", marginBottom: 6 }}>
             {view === "all"
               ? "No shipments yet"
               : `No ${STATUS_LABELS[view]?.toLowerCase()} shipments`}
           </div>
-          <div style={{ fontSize: 12, color: "#475569", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: "#5a5a7a", marginBottom: 16 }}>
             {view === "all"
               ? "Create your first shipment to get started"
               : "Try a different filter or create a new shipment"}
@@ -270,11 +270,11 @@ export default function DashboardPage({ onNewShipment, onOpenShipment }) {
                   onClick={(e) => handleDelete(e, ship.id)}
                   style={{
                     position: "absolute",
-                    top: 8,
+                    top: 12,
                     right: 8,
                     background: "none",
                     border: "none",
-                    color: "#475569",
+                    color: "#8a8aa0",
                     cursor: "pointer",
                     padding: 4,
                     opacity: 0.5,

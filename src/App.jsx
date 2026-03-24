@@ -34,12 +34,12 @@ export default function App() {
     return (
       <div style={{
         minHeight: "100vh",
-        background: "linear-gradient(160deg, #070b14 0%, #0f172a 50%, #0c1220 100%)",
-        color: "#64748b",
+        background: "#f0eff5",
+        color: "#5a5a7a",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        fontFamily: "'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}>
         Loading...
       </div>
@@ -49,34 +49,37 @@ export default function App() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(160deg, #070b14 0%, #0f172a 50%, #0c1220 100%)",
-      color: "#e2e8f0",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      background: "#f0eff5",
+      color: "#1a1a2e",
+      fontFamily: "'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     }}>
-      {/* Navigation bar */}
+      {/* Navigation bar — Thai Customs Official */}
       <div style={{
-        background: "linear-gradient(135deg, rgba(6,95,70,0.35) 0%, rgba(15,23,42,0.95) 40%, rgba(30,58,138,0.25) 100%)",
-        borderBottom: "1px solid rgba(52,211,153,0.12)", padding: "10px 24px",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "linear-gradient(135deg, #1a2a5e 0%, #2a3f7e 60%, #1a2a5e 100%)",
+        borderBottom: "3px solid #c6952e",
+        padding: "10px 24px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
       }}>
         <div
-          style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+          style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
           onClick={handleBack}
         >
           <div style={{
-            width: 32, height: 32, borderRadius: 7,
-            background: "linear-gradient(135deg, #10b981, #059669)",
+            width: 36, height: 36, borderRadius: 6,
+            background: "linear-gradient(135deg, #c6952e, #e8d5a3)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 18px rgba(16,185,129,0.25)",
+            boxShadow: "0 2px 8px rgba(198,149,46,0.3)",
           }}>
-            {Icons.box({ sz: 16 })}
+            {Icons.box({ sz: 18, c: "#1a2a5e" })}
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>
-              LogiAI <span style={{ color: "#34d399", fontWeight: 400 }}>Customs</span>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#ffffff" }}>
+              LogiAI <span style={{ color: "#e8d5a3", fontWeight: 500 }}>Customs</span>
             </div>
-            <div style={{ fontSize: 9, color: "#6ee7b7", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              Thailand Import Declaration
+            <div style={{ fontSize: 9, color: "#c6952e", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>
+              Thailand Customs Declaration System
             </div>
           </div>
         </div>
@@ -85,8 +88,18 @@ export default function App() {
             <button
               onClick={handleBack}
               style={{
-                ...s.btnGhost,
-                fontWeight: 600, fontSize: 11, padding: "6px 12px",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                color: "#e8d5a3",
+                borderRadius: 6,
+                padding: "6px 12px",
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontFamily: "'Sarabun', sans-serif",
               }}
             >
               {Icons.grid({ sz: 13 })} Dashboard
@@ -95,9 +108,19 @@ export default function App() {
           <button
             onClick={handleNewShipment}
             style={{
-              ...s.btnPrimary,
+              background: "linear-gradient(135deg, #c6952e, #e8d5a3)",
+              color: "#1a2a5e",
+              border: "none",
+              borderRadius: 6,
               padding: "6px 14px",
               fontSize: 11,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              boxShadow: "0 2px 8px rgba(198,149,46,0.3)",
+              fontFamily: "'Sarabun', sans-serif",
             }}
           >
             {Icons.plus({ sz: 13 })} New Shipment
@@ -128,13 +151,14 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
         select { outline: none; appearance: auto; }
-        select option { background: #1e293b; color: #e2e8f0; }
-        input[type="number"]::-webkit-inner-spin-button { opacity: 0.3; }
+        select option { background: #ffffff; color: #1a1a2e; }
+        input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.01); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 3px; }
-        button:hover { filter: brightness(1.1); }
+        ::-webkit-scrollbar-track { background: #e8e7ed; }
+        ::-webkit-scrollbar-thumb { background: #b0aec0; border-radius: 3px; }
+        button:hover { filter: brightness(1.05); }
         button:active { transform: scale(0.98); }
+        input:focus, select:focus { border-color: #1a2a5e !important; box-shadow: 0 0 0 2px rgba(26,42,94,0.12); }
       `}</style>
     </div>
   );

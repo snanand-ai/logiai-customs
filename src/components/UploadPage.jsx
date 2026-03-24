@@ -7,11 +7,11 @@ import { extractBLMetadata } from "../utils/pdfParser";
 import { uid } from "../utils/format";
 
 const DOC_STATUS_CONFIG = [
-  { key: "ci", label: "Commercial Invoice", icon: Icons.grid, required: true, color: "#60a5fa" },
-  { key: "bl", label: "Bill of Lading", icon: Icons.anchor, required: true, color: "#fbbf24" },
-  { key: "master", label: "Master Data (HS Codes)", icon: Icons.db, required: false, color: "#a78bfa" },
-  { key: "freight", label: "Freight Invoice", icon: Icons.dollar, required: false, color: "#34d399" },
-  { key: "drkw", label: "Previous DRKW", icon: Icons.file, required: false, color: "#f472b6" },
+  { key: "ci", label: "Commercial Invoice", icon: Icons.grid, required: true, color: "#2563eb" },
+  { key: "bl", label: "Bill of Lading", icon: Icons.anchor, required: true, color: "#c6952e" },
+  { key: "master", label: "Master Data (HS Codes)", icon: Icons.db, required: false, color: "#7c3aed" },
+  { key: "freight", label: "Freight Invoice", icon: Icons.dollar, required: false, color: "#15803d" },
+  { key: "drkw", label: "Previous DRKW", icon: Icons.file, required: false, color: "#be185d" },
 ];
 
 export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, items, setItems, md, setMd, hdr, setHdr, msg, setPg, onStatusAdvance }) {
@@ -32,7 +32,7 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
         try {
           sheetData = await parseExcel(file);
         } catch (err) {
-          log.push({ file: file.name, type: "error", info: err.message, color: "#f87171" });
+          log.push({ file: file.name, type: "error", info: err.message, color: "#dc2626" });
           continue;
         }
       }
@@ -87,20 +87,17 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
             if (!parsed.length) throw new Error("No items found — check column headers");
             setItems(parsed);
 
-            // Auto-fill shipment header from CI metadata (header + footer)
             if (wb) {
               const meta = extractHeaderMetadata(file, wb);
               if (Object.keys(meta).length > 0) {
                 setHdr((prev) => {
                   const updated = { ...prev };
-                  // Only fill empty fields — don't overwrite user entries
                   if (meta.invNo && !prev.invNo) updated.invNo = meta.invNo;
                   if (meta.invDate && !prev.invDate) updated.invDate = meta.invDate;
                   if (meta.consignee && !prev.consignee) updated.consignee = meta.consignee;
                   if (meta.blNo && !prev.blNo) updated.blNo = meta.blNo;
                   if (meta.vessel && !prev.vessel) updated.vessel = meta.vessel;
                   if (meta.currency && !prev.currency) updated.currency = meta.currency;
-                  // New fields from CI footer
                   if (meta.shipper && !prev.shipper) updated.shipper = meta.shipper;
                   if (meta.origin && !prev.origin) updated.origin = meta.origin;
                   if (meta.packages && !prev.pkgs) updated.pkgs = meta.packages;
@@ -110,9 +107,9 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
             }
 
             newDocs.ci = { name: file.name, items: parsed.length, sheet: sheetName };
-            log.push({ file: file.name, type: "ci", info: `${parsed.length} items extracted`, color: "#60a5fa" });
+            log.push({ file: file.name, type: "ci", info: `${parsed.length} items extracted`, color: "#2563eb" });
           } catch (e) {
-            log.push({ file: file.name, type: "error", info: e.message, color: "#f87171" });
+            log.push({ file: file.name, type: "error", info: e.message, color: "#dc2626" });
           }
           break;
         }
@@ -147,14 +144,13 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
             });
             setMd((prev) => ({ ...prev, ...entries }));
             newDocs.master = { name: file.name, entries: count };
-            log.push({ file: file.name, type: "master", info: `${count} HS code mappings`, color: "#a78bfa" });
+            log.push({ file: file.name, type: "master", info: `${count} HS code mappings`, color: "#7c3aed" });
           } catch (e) {
-            log.push({ file: file.name, type: "error", info: e.message, color: "#f87171" });
+            log.push({ file: file.name, type: "error", info: e.message, color: "#dc2626" });
           }
           break;
         }
         case "bl": {
-          // Extract transport metadata from B/L PDF
           if (ext === "pdf") {
             try {
               const blMeta = await extractBLMetadata(file);
@@ -163,7 +159,6 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
               if (fields.length > 0) {
                 setHdr((prev) => {
                   const updated = { ...prev };
-                  // Only fill empty fields — don't overwrite user entries
                   if (blMeta.blNo && !prev.blNo) updated.blNo = blMeta.blNo;
                   if (blMeta.vessel && !prev.vessel) updated.vessel = blMeta.vessel;
                   if (blMeta.voyage && !prev.voyage) updated.voyage = blMeta.voyage;
@@ -178,31 +173,31 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
                   if (blMeta.pkgUnit) updated.pkgUnit = blMeta.pkgUnit;
                   return updated;
                 });
-                log.push({ file: file.name, type: "bl", info: `B/L parsed — ${fields.length} fields extracted`, color: "#fbbf24" });
+                log.push({ file: file.name, type: "bl", info: `B/L parsed — ${fields.length} fields extracted`, color: "#c6952e" });
               } else {
-                log.push({ file: file.name, type: "bl", info: "Bill of Lading detected (no fields extracted)", color: "#fbbf24" });
+                log.push({ file: file.name, type: "bl", info: "Bill of Lading detected (no fields extracted)", color: "#c6952e" });
               }
             } catch (e) {
               newDocs.bl = { name: file.name };
-              log.push({ file: file.name, type: "bl", info: `Bill of Lading detected (PDF parse: ${e.message})`, color: "#fbbf24" });
+              log.push({ file: file.name, type: "bl", info: `Bill of Lading detected (PDF parse: ${e.message})`, color: "#c6952e" });
             }
           } else {
             newDocs.bl = { name: file.name };
-            log.push({ file: file.name, type: "bl", info: "Bill of Lading detected", color: "#fbbf24" });
+            log.push({ file: file.name, type: "bl", info: "Bill of Lading detected", color: "#c6952e" });
           }
           break;
         }
         case "freight":
           newDocs.freight = { name: file.name };
-          log.push({ file: file.name, type: "freight", info: "Freight invoice detected", color: "#34d399" });
+          log.push({ file: file.name, type: "freight", info: "Freight invoice detected", color: "#15803d" });
           break;
         case "drkw":
           newDocs.drkw = { name: file.name };
-          log.push({ file: file.name, type: "drkw", info: "Previous declaration detected", color: "#f472b6" });
+          log.push({ file: file.name, type: "drkw", info: "Previous declaration detected", color: "#be185d" });
           break;
         default:
           newDocs.other = [...(newDocs.other || []), { name: file.name }];
-          log.push({ file: file.name, type: "unknown", info: "Could not auto-detect type", color: "#64748b" });
+          log.push({ file: file.name, type: "unknown", info: "Could not auto-detect type", color: "#8a8aa0" });
       }
     }
 
@@ -250,8 +245,8 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
 
   return (
     <div style={{ animation: "fadeIn .3s ease" }}>
-      <h2 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 6px" }}>Upload Shipment Documents</h2>
-      <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px" }}>
+      <h2 style={{ fontSize: 22, fontWeight: 700, margin: "0 0 6px", color: "#1a2a5e" }}>Upload Shipment Documents</h2>
+      <p style={{ fontSize: 13, color: "#5a5a7a", margin: "0 0 20px" }}>
         Drop all your files at once — LogiAI auto-detects what each document is
       </p>
 
@@ -261,30 +256,30 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
         style={{
-          border: "2px dashed rgba(52,211,153,0.3)",
-          borderRadius: 16,
+          border: "2px dashed #c6952e",
+          borderRadius: 12,
           padding: "50px 24px",
           textAlign: "center",
           cursor: "pointer",
-          background: "rgba(16,185,129,0.02)",
+          background: "#faf8f3",
           transition: "all 0.2s",
           marginBottom: 24,
         }}
       >
         <input ref={inputRef} type="file" multiple accept=".xlsx,.xls,.csv,.pdf" onChange={handleInput} style={{ display: "none" }} />
-        <div style={{ color: "#34d399", marginBottom: 10 }}>{Icons.upload({ sz: 44 })}</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0" }}>Drop all shipment files here</div>
-        <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 8 }}>
+        <div style={{ color: "#c6952e", marginBottom: 10 }}>{Icons.upload({ sz: 44 })}</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#1a2a5e" }}>Drop all shipment files here</div>
+        <div style={{ fontSize: 13, color: "#5a5a7a", marginTop: 8 }}>
           Commercial Invoice (.xlsx) · Bill of Lading (.pdf) · Master Data (.xlsx) · Freight Invoice (.pdf)
         </div>
-        <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
+        <div style={{ fontSize: 12, color: "#8a8aa0", marginTop: 6 }}>
           Select multiple files at once — LogiAI identifies each document automatically
         </div>
       </div>
 
       {/* Document checklist */}
       <div style={{ ...s.card, marginBottom: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2a5e", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span>Document Checklist</span>
           {uploadLog.length > 0 && (
             <button onClick={clearAll} style={{ ...s.btnGhost, padding: "4px 10px", fontSize: 11 }}>
@@ -301,47 +296,47 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
                 key={doc.key}
                 style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 8,
-                  background: done ? "rgba(16,185,129,0.05)" : missing ? "rgba(239,68,68,0.04)" : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${done ? "rgba(52,211,153,0.2)" : missing ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)"}`,
+                  background: done ? "#f0fdf4" : missing ? "#fef2f2" : "#f8f8fc",
+                  border: `1px solid ${done ? "#bbf7d0" : missing ? "#fecaca" : "#e8e7ed"}`,
                 }}
               >
                 <div
                   style={{
                     width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                    background: done ? "rgba(52,211,153,0.15)" : missing ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.05)",
+                    background: done ? "#dcfce7" : missing ? "#fee2e2" : "#f0eff5",
                   }}
                 >
-                  {done ? Icons.check({ sz: 16, c: "#34d399" }) : missing ? Icons.alert({ sz: 16, c: "#f87171" }) : doc.icon({ sz: 16, c: "#475569" })}
+                  {done ? Icons.check({ sz: 16, c: "#15803d" }) : missing ? Icons.alert({ sz: 16, c: "#dc2626" }) : doc.icon({ sz: 16, c: "#8a8aa0" })}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: done ? "#34d399" : missing ? "#f87171" : "#94a3b8" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: done ? "#15803d" : missing ? "#dc2626" : "#5a5a7a" }}>
                     {doc.label}
-                    <span style={{ fontSize: 10, color: missing ? "#f87171" : "#475569", marginLeft: 6 }}>
+                    <span style={{ fontSize: 10, color: missing ? "#dc2626" : "#8a8aa0", marginLeft: 6 }}>
                       {doc.required ? "REQUIRED" : "OPTIONAL"}
                     </span>
                   </div>
-                  {doc.detail && <div style={{ fontSize: 11, color: "#6ee7b7", marginTop: 2 }}>{doc.detail}</div>}
-                  {missing && <div style={{ fontSize: 11, color: "#f87171", marginTop: 2 }}>Not uploaded yet</div>}
+                  {doc.detail && <div style={{ fontSize: 11, color: "#15803d", marginTop: 2 }}>{doc.detail}</div>}
+                  {missing && <div style={{ fontSize: 11, color: "#dc2626", marginTop: 2 }}>Not uploaded yet</div>}
                 </div>
-                {done && <span style={{ fontSize: 11, color: "#34d399", fontWeight: 600 }}>Loaded</span>}
+                {done && <span style={{ fontSize: 11, color: "#15803d", fontWeight: 600 }}>Loaded</span>}
               </div>
             );
           })}
         </div>
         {missingRequired.length > 0 && (
-          <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 8, fontSize: 12, color: "#f87171", display: "flex", alignItems: "center", gap: 8 }}>
-            {Icons.alert({ sz: 16, c: "#f87171" })} Missing {missingRequired.length} required document{missingRequired.length > 1 ? "s" : ""}:{" "}
+          <div style={{ marginTop: 12, padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 12, color: "#dc2626", display: "flex", alignItems: "center", gap: 8 }}>
+            {Icons.alert({ sz: 16, c: "#dc2626" })} Missing {missingRequired.length} required document{missingRequired.length > 1 ? "s" : ""}:{" "}
             <b>{missingRequired.map((d) => d.label).join(", ")}</b>
           </div>
         )}
         {missingRequired.length === 0 && docs.ci && (
-          <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(52,211,153,0.15)", borderRadius: 8, fontSize: 12, color: "#34d399", display: "flex", alignItems: "center", gap: 8 }}>
-            {Icons.check({ sz: 16, c: "#34d399" })} All required documents uploaded — ready to proceed!
+          <div style={{ marginTop: 12, padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 12, color: "#15803d", display: "flex", alignItems: "center", gap: 8 }}>
+            {Icons.check({ sz: 16, c: "#15803d" })} All required documents uploaded — ready to proceed!
           </div>
         )}
         {!docs.master && docs.ci && (
-          <div style={{ marginTop: 8, padding: "10px 14px", background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 8, fontSize: 12, color: "#a78bfa", display: "flex", alignItems: "center", gap: 8 }}>
-            {Icons.db({ sz: 14, c: "#a78bfa" })}
+          <div style={{ marginTop: 8, padding: "10px 14px", background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 8, fontSize: 12, color: "#7c3aed", display: "flex", alignItems: "center", gap: 8 }}>
+            {Icons.db({ sz: 14, c: "#7c3aed" })}
             <span>No master data? You can enter HS codes manually on the Items page, or search the <b>Thai Customs E-Tariff</b> database.</span>
           </div>
         )}
@@ -350,13 +345,13 @@ export default function UploadPage({ docs, setDocs, uploadLog, setUploadLog, ite
       {/* Processing log */}
       {uploadLog.length > 0 && (
         <div style={s.card}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginBottom: 10 }}>Processing Log</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2a5e", marginBottom: 10 }}>Processing Log</div>
           {uploadLog.map((entry, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: i < uploadLog.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: i < uploadLog.length - 1 ? "1px solid #e8e7ed" : "none" }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: entry.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 600 }}>{entry.file}</span>
+              <span style={{ fontSize: 12, color: "#1a1a2e", fontWeight: 600 }}>{entry.file}</span>
               <span style={{ fontSize: 11, color: entry.color }}>{entry.info}</span>
-              <span style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", marginLeft: "auto" }}>{entry.type}</span>
+              <span style={{ fontSize: 10, color: "#8a8aa0", textTransform: "uppercase", marginLeft: "auto" }}>{entry.type}</span>
             </div>
           ))}
         </div>

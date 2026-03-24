@@ -35,14 +35,14 @@ export default function ShipmentCard({ shipment, onClick }) {
         overflow: "hidden",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = "rgba(52,211,153,0.2)";
-        e.currentTarget.style.transform = "translateY(-1px)";
-        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)";
+        e.currentTarget.style.borderColor = "#c6952e";
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 6px 20px rgba(26,42,94,0.12)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)";
+        e.currentTarget.style.borderColor = "#d4d2e0";
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "none";
+        e.currentTarget.style.boxShadow = "0 2px 8px rgba(26,42,94,0.06)";
       }}
     >
       {/* Top row: label + status */}
@@ -59,7 +59,7 @@ export default function ShipmentCard({ shipment, onClick }) {
             style={{
               fontSize: 14,
               fontWeight: 700,
-              color: "#e2e8f0",
+              color: "#1a2a5e",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -71,7 +71,7 @@ export default function ShipmentCard({ shipment, onClick }) {
             <div
               style={{
                 fontSize: 10,
-                color: "#64748b",
+                color: "#5a5a7a",
                 marginTop: 2,
                 fontFamily: "monospace",
               }}
@@ -89,30 +89,30 @@ export default function ShipmentCard({ shipment, onClick }) {
           display: "flex",
           gap: 12,
           fontSize: 10,
-          color: "#64748b",
+          color: "#5a5a7a",
           marginBottom: 8,
         }}
       >
         {hdr.origin && (
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-            {Icons.anchor({ sz: 10, c: "#64748b" })}
+            {Icons.anchor({ sz: 10, c: "#5a5a7a" })}
             {hdr.origin} → {hdr.pod || "TH"}
           </span>
         )}
         {items.length > 0 && (
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-            {Icons.grid({ sz: 10, c: "#64748b" })}
+            {Icons.grid({ sz: 10, c: "#5a5a7a" })}
             {items.length} items
           </span>
         )}
         {hdr.priv && hdr.priv !== "NONE" && (
           <span
             style={{
-              color: "#34d399",
+              color: "#15803d",
               fontWeight: 600,
             }}
           >
-            {Icons.shield({ sz: 10, c: "#34d399" })}
+            {Icons.shield({ sz: 10, c: "#15803d" })}
             {hdr.priv}
           </span>
         )}
@@ -122,13 +122,13 @@ export default function ShipmentCard({ shipment, onClick }) {
       <div
         style={{
           fontSize: 9,
-          color: "#475569",
+          color: "#8a8aa0",
           display: "flex",
           alignItems: "center",
           gap: 4,
         }}
       >
-        {Icons.file({ sz: 9, c: "#475569" })}
+        {Icons.file({ sz: 9, c: "#8a8aa0" })}
         {timeAgo(updatedAt || createdAt)}
       </div>
     </div>

@@ -4,9 +4,9 @@ import { Field } from "./FormControls";
 import { s } from "../constants/styles";
 
 const thStyle = {
-  padding: "9px 12px", textAlign: "left", color: "#64748b", fontWeight: 600,
-  fontSize: 10, textTransform: "uppercase", borderBottom: "1px solid rgba(255,255,255,0.06)",
-  position: "sticky", top: 0, background: "rgba(15,23,42,0.98)",
+  padding: "9px 12px", textAlign: "left", color: "#ffffff", fontWeight: 600,
+  fontSize: 10, textTransform: "uppercase", borderBottom: "1px solid #1a2a5e",
+  position: "sticky", top: 0, background: "#1a2a5e",
 };
 
 export default function MasterDataPage({ md, setMd, msg }) {
@@ -37,8 +37,8 @@ export default function MasterDataPage({ md, setMd, msg }) {
     <div style={{ animation: "fadeIn .3s ease" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Master Data ({mdArr.length})</h2>
-          <p style={{ fontSize: 12, color: "#64748b", margin: "3px 0 0" }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "#1a2a5e" }}>Master Data ({mdArr.length})</h2>
+          <p style={{ fontSize: 12, color: "#5a5a7a", margin: "3px 0 0" }}>
             Part# → HS Code mapping. Upload on Upload page or add manually.
           </p>
         </div>
@@ -46,7 +46,7 @@ export default function MasterDataPage({ md, setMd, msg }) {
       </div>
 
       {showAdd && (
-        <div style={{ ...s.card, marginBottom: 14, border: "1px solid rgba(52,211,153,0.2)" }}>
+        <div style={{ ...s.card, marginBottom: 14, borderTop: "3px solid #15803d" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr 70px 70px auto auto", gap: 8, alignItems: "end" }}>
             <Field small label="Part#" value={newEntry.pn} onChange={(v) => setNewEntry((p) => ({ ...p, pn: v }))} />
             <Field small label="HS Code" value={newEntry.hs} onChange={(v) => setNewEntry((p) => ({ ...p, hs: v }))} />
@@ -70,12 +70,12 @@ export default function MasterDataPage({ md, setMd, msg }) {
 
       {mdArr.length === 0 ? (
         <div style={{ ...s.card, textAlign: "center", padding: 50 }}>
-          {Icons.db({ sz: 32, c: "#475569" })}
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#94a3b8", marginTop: 10 }}>No master data</div>
-          <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>Upload Excel on Upload page or add manually</div>
+          {Icons.db({ sz: 32, c: "#d4d2e0" })}
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#5a5a7a", marginTop: 10 }}>No master data</div>
+          <div style={{ fontSize: 12, color: "#8a8aa0", marginTop: 4 }}>Upload Excel on Upload page or add manually</div>
         </div>
       ) : (
-        <div style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ ...s.card, padding: 0, overflow: "hidden", borderTop: "3px solid #1a2a5e" }}>
           <div style={{ overflowY: "auto", maxHeight: 450 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
@@ -86,15 +86,15 @@ export default function MasterDataPage({ md, setMd, msg }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(([pn, data]) => (
-                  <tr key={pn} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                    <td style={{ padding: "7px 12px", fontFamily: "monospace", color: "#60a5fa" }}>{pn}</td>
-                    <td style={{ padding: "7px 12px", fontFamily: "monospace", color: "#fbbf24" }}>{data.hs}</td>
-                    <td style={{ padding: "7px 12px", color: "#a78bfa" }}>{data.th}</td>
-                    <td style={{ padding: "7px 12px", fontWeight: 600, color: data.duty > 0 ? "#fbbf24" : "#34d399" }}>{data.duty}%</td>
-                    <td style={{ padding: "7px 12px" }}>{data.org}</td>
+                {filtered.map(([pn, data], idx) => (
+                  <tr key={pn} style={{ borderBottom: "1px solid #e8e7ed", background: idx % 2 === 0 ? "#ffffff" : "#fafafe" }}>
+                    <td style={{ padding: "7px 12px", fontFamily: "monospace", color: "#2563eb" }}>{pn}</td>
+                    <td style={{ padding: "7px 12px", fontFamily: "monospace", color: "#c6952e", fontWeight: 600 }}>{data.hs}</td>
+                    <td style={{ padding: "7px 12px", color: "#7c3aed" }}>{data.th}</td>
+                    <td style={{ padding: "7px 12px", fontWeight: 600, color: data.duty > 0 ? "#c6952e" : "#15803d" }}>{data.duty}%</td>
+                    <td style={{ padding: "7px 12px", color: "#5a5a7a" }}>{data.org}</td>
                     <td style={{ padding: "7px 12px" }}>
-                      <button onClick={() => deleteEntry(pn)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer" }}>
+                      <button onClick={() => deleteEntry(pn)} style={{ background: "none", border: "none", color: "#8a8aa0", cursor: "pointer" }}>
                         {Icons.trash({ sz: 13 })}
                       </button>
                     </td>

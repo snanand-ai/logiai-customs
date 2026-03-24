@@ -1,8 +1,5 @@
 /**
  * HsInsight — Inline widget showing HS code usage stats
- *
- * Compact pill that appears next to HS code inputs on ItemsPage.
- * Shows times used, last used date, and common customers.
  */
 
 import { useState, useEffect } from "react";
@@ -33,12 +30,12 @@ export default function HsInsight({ hsCode, getInsight }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 4,
-        background: "rgba(251,191,36,0.08)",
-        border: "1px solid rgba(251,191,36,0.15)",
+        background: "#fffbeb",
+        border: "1px solid #fde68a",
         borderRadius: 10,
         padding: "2px 8px",
         fontSize: 9,
-        color: "#fbbf24",
+        color: "#b45309",
         whiteSpace: "nowrap",
         animation: "fadeIn .2s ease",
       }}
@@ -48,15 +45,15 @@ export default function HsInsight({ hsCode, getInsight }) {
           : undefined
       }
     >
-      {Icons.zap({ sz: 9, c: "#fbbf24" })}
+      {Icons.zap({ sz: 9, c: "#b45309" })}
       <span style={{ fontWeight: 700 }}>{data.timesUsed}x</span>
       {timeAgo && (
-        <span style={{ color: "#94a3b8" }}>
+        <span style={{ color: "#8a8aa0" }}>
           {timeAgo}
         </span>
       )}
       {data.avgDuty != null && (
-        <span style={{ color: "#64748b" }}>
+        <span style={{ color: "#5a5a7a" }}>
           avg {data.avgDuty.toFixed(1)}%
         </span>
       )}

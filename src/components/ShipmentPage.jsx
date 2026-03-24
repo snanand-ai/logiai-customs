@@ -8,15 +8,19 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
   const isSea = (hdr.transportMode || "SEA") === "SEA";
   const isExport = hdr.declarationType === "EXPORT";
 
+  const sectionHeader = {
+    fontSize: 11, fontWeight: 700, color: "#8B6914", marginBottom: 12,
+    textTransform: "uppercase", letterSpacing: "0.06em",
+    borderBottom: "1px solid #e8e7ed", paddingBottom: 6,
+  };
+
   return (
     <div style={{ animation: "fadeIn .3s ease" }}>
-      <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 20px" }}>Shipment Details</h2>
+      <h2 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 20px", color: "#1a2a5e" }}>Shipment Details</h2>
 
       {/* Declaration Type & Transport Mode */}
       <div style={{ ...s.card, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#6ee7b7", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          Declaration
-        </div>
+        <div style={sectionHeader}>Declaration</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Select
             label="Declaration Type"
@@ -35,9 +39,7 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
 
       {/* Transport */}
       <div style={{ ...s.card, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#6ee7b7", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          Transport
-        </div>
+        <div style={sectionHeader}>Transport</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
           <Field label={isSea ? "B/L Number" : "Ref / Waybill No"} value={hdr.blNo} onChange={(v) => sH("blNo", v)} placeholder={isSea ? "e.g. 1070749239" : "e.g. TRK-001"} />
           {isSea && <Field label="Vessel" value={hdr.vessel} onChange={(v) => sH("vessel", v)} />}
@@ -57,9 +59,7 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
 
       {/* Parties */}
       <div style={{ ...s.card, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#6ee7b7", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-          Parties
-        </div>
+        <div style={sectionHeader}>Parties</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Customer / Client" value={hdr.customer} onChange={(v) => sH("customer", v)} placeholder="e.g. Electrolux, Samsung" />
           <Field label="Shipper" value={hdr.shipper} onChange={(v) => sH("shipper", v)} />
@@ -74,7 +74,7 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
       {/* Invoice + Freight/Privilege */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={s.card}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#6ee7b7", marginBottom: 12, textTransform: "uppercase" }}>Invoice</div>
+          <div style={sectionHeader}>Invoice</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Invoice No" value={hdr.invNo} onChange={(v) => sH("invNo", v)} />
             <Field label="Invoice Date" value={hdr.invDate} onChange={(v) => sH("invDate", v)} type="date" />
@@ -113,7 +113,7 @@ export default function ShipmentPage({ hdr, sH, setPg, laneInsight }) {
         </div>
 
         <div style={s.card}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#6ee7b7", marginBottom: 12, textTransform: "uppercase" }}>Freight & Privilege</div>
+          <div style={sectionHeader}>Freight & Privilege</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label={`Freight (${hdr.currency})`} value={hdr.freight} onChange={(v) => sH("freight", v)} type="number" />
             <Field

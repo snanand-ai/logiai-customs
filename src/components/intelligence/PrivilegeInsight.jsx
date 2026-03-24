@@ -1,8 +1,5 @@
 /**
  * PrivilegeInsight — Privilege savings summary widget
- *
- * Shows total duty savings from using FTA/privilege schemes.
- * Used in DeclarationPage summary and dashboard.
  */
 
 import { useState, useEffect } from "react";
@@ -25,9 +22,10 @@ export default function PrivilegeInsight({ loadSavings }) {
   return (
     <div
       style={{
-        background: "rgba(52,211,153,0.06)",
-        border: "1px solid rgba(52,211,153,0.12)",
-        borderRadius: 10,
+        background: "#f0fdf4",
+        border: "1px solid #bbf7d0",
+        borderLeft: "4px solid #15803d",
+        borderRadius: 8,
         padding: "12px 16px",
         animation: "fadeIn .2s ease",
       }}
@@ -40,12 +38,12 @@ export default function PrivilegeInsight({ loadSavings }) {
           marginBottom: 8,
         }}
       >
-        {Icons.shield({ sz: 14, c: "#34d399" })}
+        {Icons.shield({ sz: 14, c: "#15803d" })}
         <span
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: "#34d399",
+            color: "#15803d",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
           }}
@@ -55,7 +53,7 @@ export default function PrivilegeInsight({ loadSavings }) {
         <span
           style={{
             fontSize: 10,
-            color: "#64748b",
+            color: "#5a5a7a",
             marginLeft: "auto",
           }}
         >
@@ -67,7 +65,7 @@ export default function PrivilegeInsight({ loadSavings }) {
         style={{
           fontSize: 22,
           fontWeight: 700,
-          color: "#34d399",
+          color: "#15803d",
           marginBottom: 8,
           fontFamily: "monospace",
         }}
@@ -76,7 +74,7 @@ export default function PrivilegeInsight({ loadSavings }) {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}{" "}
-        <span style={{ fontSize: 11, fontWeight: 400, color: "#64748b" }}>
+        <span style={{ fontSize: 11, fontWeight: 400, color: "#5a5a7a" }}>
           THB saved
         </span>
       </div>
@@ -88,14 +86,14 @@ export default function PrivilegeInsight({ loadSavings }) {
               key={scheme}
               style={{
                 fontSize: 9,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
+                background: "#ffffff",
+                border: "1px solid #d4d2e0",
                 borderRadius: 6,
                 padding: "3px 8px",
-                color: "#94a3b8",
+                color: "#5a5a7a",
               }}
             >
-              <strong style={{ color: "#e2e8f0" }}>{scheme}</strong>{" "}
+              <strong style={{ color: "#1a2a5e" }}>{scheme}</strong>{" "}
               {amount.toLocaleString("en", { maximumFractionDigits: 0 })}
             </span>
           ))}
